@@ -1,0 +1,29 @@
+[toolchain]
+anchor_version = "0.29.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.devnet]
+crowd_pass = "4RfgHgQRwssnJuzShFwmZVEw7DjNJj5TFPLjFJWJ8MT1"
+
+[programs.localnet]
+crowd_pass = "4RfgHgQRwssnJuzShFwmZVEw7DjNJj5TFPLjFJWJ8MT1"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+# ─────────────────────────────────────────────────────────────────
+#  IMPORTANTE: cambia a "devnet" antes de hacer `anchor deploy`
+#  Opciones válidas: "localnet" | "devnet" | "mainnet-beta"
+# ─────────────────────────────────────────────────────────────────
+cluster = "devnet"
+wallet   = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[workspace]
+members = ["programs/crowd_pass"]

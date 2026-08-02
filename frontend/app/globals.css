@@ -1,0 +1,205 @@
+/* ================================================================
+   CrowdPass — Estilos Globales
+   /frontend/app/globals.css
+
+   Incluye:
+   - Reset y variables CSS base
+   - Override del modal de wallet-adapter para que se vea
+     coherente con la estética dark/Solana de CrowdPass
+   - Scrollbar personalizada
+================================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Reset ────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Variables globales ───────────────────────────────────────── */
+:root {
+  /* Paleta Solana */
+  --sol-purple:    #9945FF;
+  --sol-green:     #14F195;
+  --sol-dark:      #0F0B1E;
+  --sol-card:      #150D2E;
+  --sol-border:    rgba(153, 69, 255, 0.2);
+  --sol-muted:     rgba(255, 255, 255, 0.45);
+  --sol-input:     rgba(255, 255, 255, 0.06);
+
+  /* Fuentes (inyectadas por next/font via CSS variables) */
+  --font-display: var(--font-syne), 'Syne', system-ui, sans-serif;
+  --font-mono:    var(--font-dm-mono), 'DM Mono', 'Courier New', monospace;
+
+  /* Radios */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family:      var(--font-display);
+  background-color: var(--sol-dark);
+  color:            #ffffff;
+  min-height:       100vh;
+  line-height:      1.5;
+  -webkit-font-smoothing:  antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--sol-dark); }
+::-webkit-scrollbar-thumb {
+  background:    var(--sol-border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--sol-purple); }
+
+/* ── Selección de texto ───────────────────────────────────────── */
+::selection {
+  background: rgba(153, 69, 255, 0.35);
+  color: #fff;
+}
+
+/* ── Links base ───────────────────────────────────────────────── */
+a {
+  color: var(--sol-purple);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+a:hover { color: var(--sol-green); }
+
+/* ── Imágenes ─────────────────────────────────────────────────── */
+img, svg { display: block; max-width: 100%; }
+
+/* ================================================================
+   WALLET ADAPTER MODAL — Overrides de estética
+   Sobreescribe los estilos por defecto del modal de selección
+   de wallet para que encaje con el diseño de CrowdPass.
+================================================================ */
+
+/* Overlay / backdrop */
+.wallet-adapter-modal-wrapper {
+  background: rgba(8, 5, 18, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Contenedor del modal */
+.wallet-adapter-modal {
+  background:    var(--sol-card) !important;
+  border:        1px solid var(--sol-border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow:    0 24px 80px rgba(0, 0, 0, 0.6) !important;
+  font-family:   var(--font-display) !important;
+}
+
+/* Título del modal */
+.wallet-adapter-modal-title {
+  font-family:   var(--font-display) !important;
+  font-weight:   700 !important;
+  font-size:     18px !important;
+  color:         #fff !important;
+  letter-spacing: -0.3px !important;
+}
+
+/* Botón individual de wallet */
+.wallet-adapter-modal-list li button {
+  background:    rgba(255, 255, 255, 0.04) !important;
+  border:        1px solid var(--sol-border) !important;
+  border-radius: var(--radius-md) !important;
+  color:         #fff !important;
+  font-family:   var(--font-display) !important;
+  font-size:     14px !important;
+  font-weight:   600 !important;
+  transition:    all 0.15s !important;
+  padding:       12px 16px !important;
+}
+
+.wallet-adapter-modal-list li button:hover {
+  background:  rgba(153, 69, 255, 0.12) !important;
+  border-color: var(--sol-purple) !important;
+  transform:    translateX(2px) !important;
+}
+
+/* Botón "Conectar" principal */
+.wallet-adapter-button-trigger {
+  background:    rgba(153, 69, 255, 0.15) !important;
+  border:        1px solid var(--sol-border) !important;
+  border-radius: var(--radius-md) !important;
+  color:         #fff !important;
+  font-family:   var(--font-display) !important;
+  font-weight:   700 !important;
+  font-size:     13px !important;
+  height:        40px !important;
+  padding:       0 18px !important;
+  letter-spacing: 0.2px !important;
+  transition:    all 0.15s !important;
+}
+
+.wallet-adapter-button-trigger:hover:not(:disabled) {
+  background:  rgba(153, 69, 255, 0.28) !important;
+  border-color: var(--sol-purple) !important;
+  box-shadow:  0 0 18px rgba(153, 69, 255, 0.25) !important;
+}
+
+/* Botón de colapsar/cerrar modal */
+.wallet-adapter-modal-button-close {
+  background:    rgba(255, 255, 255, 0.06) !important;
+  border-radius: 50% !important;
+}
+
+.wallet-adapter-modal-button-close:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ================================================================
+   UTILIDADES GLOBALES
+================================================================ */
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================================================================
+   COMPONENTES CROWDPASS (Página principal)
+================================================================ */
+.page-wrap { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo-dot { width: 16px; height: 16px; background-color: var(--sol-green); border-radius: 50%; box-shadow: 0 0 12px var(--sol-green); }
+.logo-text { font-size: 24px; font-weight: 800; font-family: var(--font-display); letter-spacing: -0.5px; }
+.card { background: var(--sol-card); border: 1px solid var(--sol-border); border-radius: var(--radius-lg); padding: 30px; margin-bottom: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+.card-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; color: #fff; }
+.field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.field label { font-size: 13px; color: var(--sol-muted); font-weight: 600; }
+input { background: var(--sol-input); border: 1px solid var(--sol-border); border-radius: var(--radius-md); color: #fff; padding: 14px 16px; font-family: var(--font-display); font-size: 15px; outline: none; transition: all 0.2s; width: 100%; }
+input:focus { border-color: var(--sol-purple); background: rgba(153, 69, 255, 0.05); box-shadow: 0 0 0 2px rgba(153, 69, 255, 0.2); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.btn-primary { width: 100%; background: var(--sol-purple); color: #fff; border: none; border-radius: var(--radius-md); padding: 16px; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s; font-family: var(--font-display); }
+.btn-primary:hover:not(:disabled) { background: #A855F7; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(153, 69, 255, 0.4); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.status { margin-top: 16px; font-size: 14px; text-align: center; }
+.status.error { color: #ff5555; background: rgba(255, 85, 85, 0.1); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 85, 85, 0.3); }
+.campaign-list { display: flex; flex-direction: column; gap: 16px; }
+.success-card { padding: 20px; border-left: 4px solid var(--sol-green); margin-bottom: 0 !important; }
+.url-box { margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: var(--radius-sm); font-family: var(--font-mono); color: var(--sol-muted); word-break: break-all; }
+.hero { display: flex; height: 60vh; align-items: center; justify-content: center; text-align: center; }
+.hero h1 { font-size: 32px; color: var(--sol-muted); font-weight: 600; }
