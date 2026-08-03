@@ -10,8 +10,8 @@
 //    anchor test --skip-local-validator ← si ya tienes surfpool/devnet
 // ================================================================
 
-import * as anchor from "@coral-xyz/anchor";
-import { Program, BN }  from "@coral-xyz/anchor";
+import * as anchor from "@anchor-lang/core";
+import { Program, BN }  from "@anchor-lang/core";
 import { CrowdPass }    from "../target/types/crowd_pass";
 import {
   Keypair,

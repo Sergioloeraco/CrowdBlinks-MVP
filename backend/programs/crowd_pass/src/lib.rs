@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
 // Este ID se actualizará automáticamente cuando le des a "Build" en Playground
-declare_id!("4RfgHgQRwssnJuzShFwmZVEw7DjNJj5TFPLjFJWJ8MT1");
+declare_id!("GSpEH5FMAmXwXSGVNtn6gjM2zGBbvKJAM8QrpqBrsWGf");
 
 #[program]
 pub mod crowd_pass {
@@ -53,13 +53,16 @@ pub mod crowd_pass {
         }
 
         // TRANSFERENCIA AL ESCROW: El dinero va al PDA, no a la wallet del organizador
+        let cpi_accounts = system_program::Transfer {
+            from: ctx.accounts.supporter.to_account_info(),
+            to: campaign.to_account_info(),
+        };
+
         let cpi_context = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.supporter.to_account_info(),
-                to: campaign.to_account_info(), // <--- ¡La magia del Escrow está aquí!
-            }
+            ctx.accounts.system_program.key(),
+            cpi_accounts,
         );
+
         system_program::transfer(cpi_context, amount)?;
 
         campaign.current_funding = campaign.current_funding.checked_add(amount).unwrap();
