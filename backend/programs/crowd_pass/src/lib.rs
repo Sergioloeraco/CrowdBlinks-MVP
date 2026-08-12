@@ -15,34 +15,20 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_lang::system_program;
-use mpl_core::instructions::CreateV1CpiBuilder;
 
-declare_id!("GSpEH5FMAmXwXSGVNtn6gjM2zGBbvKJAM8QrpqBrsWGf");
+declare_id!("AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb");
 
-// ── Tesorería de CrowdBlinks (recibe el 1% de fee) ──────────────
-// TODO: reemplazar por la wallet real de tesorería antes del piloto.
-// Usamos Pubkey::new_from_array en vez del macro pubkey!() porque
-// esta versión local de Anchor/solana_program no lo expone en la
-// ruta anchor_lang::solana_program::pubkey! (sí existe en Playground,
-// pero no aquí — versiones distintas de la crate).
-pub const TREASURY_PUBKEY: Pubkey = Pubkey::new_from_array([
-    98, 245, 69, 103, 185, 209, 2, 74, 243, 64, 222, 227, 168, 96, 185, 27, 150, 220, 232, 151,
-    102, 27, 169, 234, 225, 61, 193, 244, 55, 164, 25, 108,
-]); // = 7fHsf7Ggr6RNuxFV7zLTrs6yXMdboLJDtBroHefe1PcP
+pub const TREASURY_PUBKEY: Pubkey =
+    pubkey!("5Ef7KDsuTB5XzHPJ3D9aX2R4seobdC5ADJb98brrCEm6");
 
-const FEE_BPS: u64 = 100; // 1% = 100 basis points sobre 10_000
-
-// ================================================================
-//  PROGRAMA PRINCIPAL
-// ================================================================
+const MAX_EVENT_ID_LEN: usize = 32;
+const FEE_BPS: u64 = 100;
+const BPS_DENOMINATOR: u64 = 10_000;
 
 #[program]
 pub mod crowd_pass {
     use super::*;
 
-    // ─────────────────────────────────────────────────────────────
-    //  1. INITIALIZE CAMPAIGN  (CREATE)
-    // ─────────────────────────────────────────────────────────────
     pub fn initialize_campaign(
         ctx: Context<InitializeCampaign>,
         event_id: String,
@@ -50,7 +36,10 @@ pub mod crowd_pass {
         max_tickets: u16,
     ) -> Result<()> {
         require!(!event_id.is_empty(), CrowdBlinksError::InvalidEventId);
-        require!(event_id.len() <= 32, CrowdBlinksError::InvalidEventId);
+        require!(
+            event_id.len() <= MAX_EVENT_ID_LEN,
+            CrowdBlinksError::InvalidEventId
+        );
         require!(ticket_price > 0, CrowdBlinksError::InvalidTicketPrice);
         require!(max_tickets > 0, CrowdBlinksError::InvalidMaxTickets);
         require!(
@@ -62,12 +51,14 @@ pub mod crowd_pass {
         campaign.authority = ctx.accounts.authority.key();
         campaign.event_id = event_id.clone();
         campaign.ticket_price = ticket_price;
+        campaign.event_id = event_id.clone();
+        campaign.ticket_price = ticket_price;
         campaign.max_tickets = max_tickets;
         campaign.tickets_sold = 0;
         campaign.is_active = true;
 
         msg!(
-            "CrowdBlinks OK Evento '{}' creado | Precio: {} lamports | Cupo: {}",
+            "CrowdBlinks event '{}' created | price: {} lamports | capacity: {}",
             event_id,
             ticket_price,
             max_tickets
@@ -75,9 +66,6 @@ pub mod crowd_pass {
         Ok(())
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  2. SUPPORT CAMPAIGN  (Compra de boleto + split de fee 1%)
-    // ─────────────────────────────────────────────────────────────
     pub fn support_campaign(ctx: Context<SupportCampaign>, amount: u64) -> Result<()> {
         let campaign = &mut ctx.accounts.campaign;
 
@@ -96,16 +84,14 @@ pub mod crowd_pass {
             CrowdBlinksError::InvalidTreasury
         );
 
-        // ── Split on-chain: 99% organizador / 1% tesorería ──────
         let fee_amount = amount
             .checked_mul(FEE_BPS)
-            .and_then(|v| v.checked_div(10_000))
+            .and_then(|value| value.checked_div(BPS_DENOMINATOR))
             .ok_or(CrowdBlinksError::Overflow)?;
         let organizer_amount = amount
             .checked_sub(fee_amount)
             .ok_or(CrowdBlinksError::Overflow)?;
 
-        // Transferencia al organizador (99%)
         let cpi_organizer = CpiContext::new(
             ctx.accounts.system_program.key(),
             system_program::Transfer {
@@ -115,17 +101,17 @@ pub mod crowd_pass {
         );
         system_program::transfer(cpi_organizer, organizer_amount)?;
 
-        // Transferencia a la tesorería de CrowdBlinks (1%)
         let cpi_treasury = CpiContext::new(
             ctx.accounts.system_program.key(),
             system_program::Transfer {
                 from: ctx.accounts.supporter.to_account_info(),
                 to: ctx.accounts.treasury.to_account_info(),
             },
+                to: ctx.accounts.treasury.to_account_info(),
+            },
         );
         system_program::transfer(cpi_treasury, fee_amount)?;
 
-        // ── Actualizar contador de boletos vendidos ─────────────
         campaign.tickets_sold = campaign
             .tickets_sold
             .checked_add(1)
@@ -133,107 +119,20 @@ pub mod crowd_pass {
 
         if campaign.tickets_sold >= campaign.max_tickets {
             campaign.is_active = false;
-            msg!(
-                "CrowdBlinks OK Evento '{}' agotado (sold out).",
-                campaign.event_id
-            );
-        }
-
-        // TODO (sprint actual): tras confirmar el pago, emitir el cNFT
-        // del boleto vía CPI a Metaplex Bubblegum (mint_to_collection_v1),
-        // usando la wallet del supporter como leaf owner. Requiere definir
-        // el Merkle Tree del evento y su tree authority — pendiente de
-        // diseño, no incluido en este archivo todavía.
-
-        Ok(())
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  3. BUY TICKET  (Pago + NFT Metaplex Core en una transaccion)
-    // ─────────────────────────────────────────────────────────────
-    pub fn buy_ticket(
-        ctx: Context<BuyTicket>,
-        ticket_name: String,
-        ticket_uri: String,
-    ) -> Result<()> {
-        require!(!ticket_name.is_empty(), CrowdBlinksError::InvalidTicketName);
-        require!(ticket_name.len() <= 64, CrowdBlinksError::InvalidTicketName);
-        require!(!ticket_uri.is_empty(), CrowdBlinksError::InvalidTicketUri);
-        require!(ticket_uri.len() <= 200, CrowdBlinksError::InvalidTicketUri);
-
-        let campaign = &mut ctx.accounts.campaign;
-
-        require!(campaign.is_active, CrowdBlinksError::CampaignInactive);
-        require!(
-            campaign.tickets_sold < campaign.max_tickets,
-            CrowdBlinksError::SoldOut
-        );
-
-        let ticket_price = campaign.ticket_price;
-        require!(ticket_price > 0, CrowdBlinksError::InvalidTicketPrice);
-
-        let buyer_info = ctx.accounts.buyer.to_account_info();
-        let organizer_info = ctx.accounts.organizer.to_account_info();
-        let ticket_asset_info = ctx.accounts.ticket_asset.to_account_info();
-        let core_program_info = ctx.accounts.core_program.to_account_info();
-        let system_program_info = ctx.accounts.system_program.to_account_info();
-
-        invoke(
-            &system_instruction::transfer(
-                &ctx.accounts.buyer.key(),
-                &ctx.accounts.organizer.key(),
-                ticket_price,
-            ),
-            &[
-                buyer_info.clone(),
-                organizer_info,
-                system_program_info.clone(),
-            ],
-        )?;
-
-        CreateV1CpiBuilder::new(&core_program_info)
-            .asset(&ticket_asset_info)
-            .collection(None)
-            .authority(Some(&buyer_info))
-            .payer(&buyer_info)
-            .owner(Some(&buyer_info))
-            .update_authority(Some(&buyer_info))
-            .system_program(&system_program_info)
-            .name(ticket_name)
-            .uri(ticket_uri)
-            .invoke()?;
-
-        campaign.tickets_sold = campaign
-            .tickets_sold
-            .checked_add(1)
-            .ok_or(CrowdBlinksError::Overflow)?;
-
-        if campaign.tickets_sold >= campaign.max_tickets {
-            campaign.is_active = false;
-            msg!(
-                "CrowdBlinks OK Evento '{}' agotado (sold out).",
-                campaign.event_id
-            );
+            msg!("CrowdBlinks event '{}' sold out.", campaign.event_id);
         }
 
         Ok(())
     }
 
-    // ─────────────────────────────────────────────────────────────
-    //  4. CLOSE CAMPAIGN  (Recuperar rent)
-    // ─────────────────────────────────────────────────────────────
     pub fn close_campaign(ctx: Context<CloseCampaign>) -> Result<()> {
         msg!(
-            "CrowdBlinks OK Evento '{}' cerrado definitivamente.",
+            "CrowdBlinks event '{}' closed.",
             ctx.accounts.campaign.event_id
         );
         Ok(())
     }
 }
-
-// ================================================================
-//  ESTRUCTURAS DE CUENTAS
-// ================================================================
 
 #[derive(Accounts)]
 #[instruction(event_id: String)]
@@ -242,10 +141,11 @@ pub struct InitializeCampaign<'info> {
         init,
         payer = authority,
         space = CampaignState::SPACE,
+        space = CampaignState::SPACE,
         seeds = [b"campaign", authority.key().as_ref(), event_id.as_bytes()],
         bump
     )]
-    pub campaign: Account<'info, CampaignState>,
+    pub campaign: Box<Account<'info, CampaignState>>,
     #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
@@ -258,37 +158,19 @@ pub struct SupportCampaign<'info> {
         seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
         bump,
         has_one = authority
+        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
+        bump,
+        has_one = authority
     )]
-    pub campaign: Account<'info, CampaignState>,
+    pub campaign: Box<Account<'info, CampaignState>>,
     #[account(mut)]
     pub supporter: Signer<'info>,
-    /// CHECK: validado vía has_one = authority contra campaign.authority
+    /// CHECK: validated by has_one against campaign.authority.
     #[account(mut)]
     pub authority: UncheckedAccount<'info>,
-    /// CHECK: validado vía require_keys_eq! contra TREASURY_PUBKEY
+    /// CHECK: validated against TREASURY_PUBKEY.
     #[account(mut)]
     pub treasury: UncheckedAccount<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct BuyTicket<'info> {
-    #[account(
-        mut,
-        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
-        bump
-    )]
-    pub campaign: Account<'info, CampaignState>,
-    #[account(mut)]
-    pub buyer: Signer<'info>,
-    /// CHECK: recibe el pago; se fija contra campaign.authority para evitar desvio de fondos.
-    #[account(mut, address = campaign.authority @ CrowdBlinksError::InvalidOrganizer)]
-    pub organizer: AccountInfo<'info>,
-    #[account(mut)]
-    pub ticket_asset: Signer<'info>,
-    /// CHECK: validado por address contra el programa oficial de Metaplex Core.
-    #[account(address = mpl_core::ID)]
-    pub core_program: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -297,18 +179,17 @@ pub struct CloseCampaign<'info> {
     #[account(
         mut,
         seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
+        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
         bump,
         has_one = authority,
         close = authority
+        has_one = authority,
+        close = authority
     )]
-    pub campaign: Account<'info, CampaignState>,
+    pub campaign: Box<Account<'info, CampaignState>>,
     #[account(mut)]
     pub authority: Signer<'info>,
 }
-
-// ================================================================
-//  ESTADO DEL PROGRAMA (PDA)
-// ================================================================
 
 #[account]
 pub struct CampaignState {
@@ -318,44 +199,33 @@ pub struct CampaignState {
     pub max_tickets: u16,
     pub tickets_sold: u16,
     pub is_active: bool,
+    pub authority: Pubkey,
+    pub event_id: String,
+    pub ticket_price: u64,
+    pub max_tickets: u16,
+    pub tickets_sold: u16,
+    pub is_active: bool,
 }
 
 impl CampaignState {
-    pub const SPACE: usize = 8   // discriminator
-        + 32  // authority
-        + 36  // event_id (4 prefijo + 32 chars max)
-        + 8   // ticket_price
-        + 2   // max_tickets (u16)
-        + 2   // tickets_sold (u16)
-        + 1; // is_active
+    pub const SPACE: usize = 8 + 32 + (4 + MAX_EVENT_ID_LEN) + 8 + 2 + 2 + 1;
 }
-
-// ================================================================
-//  ERRORES
-// ================================================================
 
 #[error_code]
 pub enum CrowdBlinksError {
-    #[msg("El event_id no puede estar vacío ni superar 32 caracteres.")]
+    #[msg("El event_id no puede estar vacio ni superar 32 caracteres.")]
     InvalidEventId,
     #[msg("El precio del boleto debe ser mayor a 0 lamports.")]
     InvalidTicketPrice,
-    #[msg("El máximo de boletos debe ser mayor a 0.")]
+    #[msg("El maximo de boletos debe ser mayor a 0.")]
     InvalidMaxTickets,
-    #[msg("Este evento no está activo o ya se agotó.")]
+    #[msg("Este evento no esta activo o ya se agoto.")]
     CampaignInactive,
     #[msg("El monto enviado no coincide con el precio del boleto.")]
+    #[msg("El monto enviado no coincide con el precio del boleto.")]
     IncorrectPaymentAmount,
-    #[msg("La cuenta de tesorería no coincide con la esperada.")]
+    #[msg("La cuenta de tesoreria no coincide con la esperada.")]
     InvalidTreasury,
-    #[msg("Desbordamiento aritmético detectado.")]
+    #[msg("Desbordamiento aritmetico detectado.")]
     Overflow,
-    #[msg("El evento ya no tiene boletos disponibles.")]
-    SoldOut,
-    #[msg("El organizador no coincide con la autoridad de la campaña.")]
-    InvalidOrganizer,
-    #[msg("El nombre del boleto no puede estar vacio ni superar 64 caracteres.")]
-    InvalidTicketName,
-    #[msg("La URI del boleto no puede estar vacia ni superar 200 caracteres.")]
-    InvalidTicketUri,
 }

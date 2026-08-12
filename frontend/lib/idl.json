@@ -1,1 +1,290 @@
-{"version":"0.1.0","name":"crowd_pass","instructions":[{"name":"initializeCampaign","accounts":[{"name":"campaign","isMut":true,"isSigner":false},{"name":"authority","isMut":true,"isSigner":true},{"name":"systemProgram","isMut":false,"isSigner":false}],"args":[{"name":"eventId","type":"string"},{"name":"ticketPrice","type":"u64"},{"name":"fundingGoal","type":"u64"},{"name":"maxTickets","type":"u64"},{"name":"title","type":"string"},{"name":"description","type":"string"}]},{"name":"supportCampaign","accounts":[{"name":"campaign","isMut":true,"isSigner":false},{"name":"supporter","isMut":true,"isSigner":true},{"name":"systemProgram","isMut":false,"isSigner":false}],"args":[{"name":"amount","type":"u64"}]},{"name":"withdrawFunds","accounts":[{"name":"campaign","isMut":true,"isSigner":false},{"name":"authority","isMut":true,"isSigner":true}],"args":[]},{"name":"closeCampaign","accounts":[{"name":"campaign","isMut":true,"isSigner":false},{"name":"authority","isMut":true,"isSigner":true}],"args":[]}],"accounts":[{"name":"CampaignState","type":{"kind":"struct","fields":[{"name":"authority","type":"publicKey"},{"name":"eventId","type":"string"},{"name":"ticketPrice","type":"u64"},{"name":"fundingGoal","type":"u64"},{"name":"currentFunding","type":"u64"},{"name":"maxTickets","type":"u64"},{"name":"ticketsSold","type":"u64"},{"name":"isActive","type":"bool"},{"name":"title","type":"string"},{"name":"description","type":"string"},{"name":"createdAt","type":"i64"},{"name":"bump","type":"u8"}]}}],"errors":[{"code":6000,"name":"InvalidEventId","msg":"El event_id no puede estar vacío."},{"code":6001,"name":"EventIdTooLong","msg":"El event_id no puede superar 32 caracteres."},{"code":6002,"name":"TitleTooLong","msg":"El título no puede superar 64 caracteres."},{"code":6003,"name":"DescriptionTooLong","msg":"La descripción no puede superar 256 caracteres."},{"code":6004,"name":"InvalidFundingGoal","msg":"La meta de financiamiento debe ser mayor a 0 lamports."},{"code":6005,"name":"InvalidMaxTickets","msg":"El máximo de boletos debe ser mayor a 0."},{"code":6006,"name":"CampaignInactive","msg":"Esta campaña ya no está activa."},{"code":6007,"name":"SoldOut","msg":"Sold out: todos los boletos han sido vendidos."},{"code":6008,"name":"IncorrectPaymentAmount","msg":"El monto enviado no coincide exactamente con el precio del boleto."},{"code":6009,"name":"AmountMustBePositive","msg":"El monto de donación debe ser mayor a 0 lamports."},{"code":6010,"name":"NoFundsToWithdraw","msg":"No hay fondos disponibles para retirar."},{"code":6011,"name":"UnauthorizedWithdrawal","msg":"Solo el organizador puede retirar los fondos."},{"code":6012,"name":"UnauthorizedClose","msg":"Solo el organizador puede cerrar la campaña."},{"code":6013,"name":"Overflow","msg":"Desbordamiento aritmético detectado."}]}
+{
+  "address": "AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb",
+  "metadata": {
+    "name": "crowd_pass",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "close_campaign",
+      "discriminator": [
+        65,
+        49,
+        110,
+        7,
+        63,
+        238,
+        206,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.authority",
+                "account": "CampaignState"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.event_id",
+                "account": "CampaignState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "campaign"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_campaign",
+      "discriminator": [
+        169,
+        88,
+        7,
+        6,
+        9,
+        165,
+        65,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "event_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "event_id",
+          "type": "string"
+        },
+        {
+          "name": "ticket_price",
+          "type": "u64"
+        },
+        {
+          "name": "max_tickets",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "support_campaign",
+      "discriminator": [
+        243,
+        81,
+        243,
+        9,
+        4,
+        140,
+        21,
+        133
+      ],
+      "accounts": [
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.authority",
+                "account": "CampaignState"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.event_id",
+                "account": "CampaignState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "supporter",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "relations": [
+            "campaign"
+          ]
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "CampaignState",
+      "discriminator": [
+        63,
+        79,
+        39,
+        33,
+        227,
+        95,
+        185,
+        189
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidEventId",
+      "msg": "El event_id no puede estar vacio ni superar 32 caracteres."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidTicketPrice",
+      "msg": "El precio del boleto debe ser mayor a 0 lamports."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidMaxTickets",
+      "msg": "El maximo de boletos debe ser mayor a 0."
+    },
+    {
+      "code": 6003,
+      "name": "CampaignInactive",
+      "msg": "Este evento no esta activo o ya se agoto."
+    },
+    {
+      "code": 6004,
+      "name": "IncorrectPaymentAmount",
+      "msg": "El monto enviado no coincide con el precio del boleto."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidTreasury",
+      "msg": "La cuenta de tesoreria no coincide con la esperada."
+    },
+    {
+      "code": 6006,
+      "name": "Overflow",
+      "msg": "Desbordamiento aritmetico detectado."
+    }
+  ],
+  "types": [
+    {
+      "name": "CampaignState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "event_id",
+            "type": "string"
+          },
+          {
+            "name": "ticket_price",
+            "type": "u64"
+          },
+          {
+            "name": "max_tickets",
+            "type": "u16"
+          },
+          {
+            "name": "tickets_sold",
+            "type": "u16"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ]
+}

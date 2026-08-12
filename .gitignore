@@ -20,6 +20,7 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+frontend/.env.local
 
 # Logs
 *.log
