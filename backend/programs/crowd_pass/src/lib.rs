@@ -13,7 +13,9 @@
 // ================================================================
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_lang::system_program;
+use mpl_core::instructions::CreateV1CpiBuilder;
 
 declare_id!("GSpEH5FMAmXwXSGVNtn6gjM2zGBbvKJAM8QrpqBrsWGf");
 
@@ -24,8 +26,8 @@ declare_id!("GSpEH5FMAmXwXSGVNtn6gjM2zGBbvKJAM8QrpqBrsWGf");
 // ruta anchor_lang::solana_program::pubkey! (sí existe en Playground,
 // pero no aquí — versiones distintas de la crate).
 pub const TREASURY_PUBKEY: Pubkey = Pubkey::new_from_array([
-    98, 245, 69, 103, 185, 209, 2, 74, 243, 64, 222, 227, 168, 96, 185, 27,
-    150, 220, 232, 151, 102, 27, 169, 234, 225, 61, 193, 244, 55, 164, 25, 108,
+    98, 245, 69, 103, 185, 209, 2, 74, 243, 64, 222, 227, 168, 96, 185, 27, 150, 220, 232, 151,
+    102, 27, 169, 234, 225, 61, 193, 244, 55, 164, 25, 108,
 ]); // = 7fHsf7Ggr6RNuxFV7zLTrs6yXMdboLJDtBroHefe1PcP
 
 const FEE_BPS: u64 = 100; // 1% = 100 basis points sobre 10_000
@@ -131,7 +133,10 @@ pub mod crowd_pass {
 
         if campaign.tickets_sold >= campaign.max_tickets {
             campaign.is_active = false;
-            msg!("CrowdBlinks OK Evento '{}' agotado (sold out).", campaign.event_id);
+            msg!(
+                "CrowdBlinks OK Evento '{}' agotado (sold out).",
+                campaign.event_id
+            );
         }
 
         // TODO (sprint actual): tras confirmar el pago, emitir el cNFT
@@ -144,7 +149,78 @@ pub mod crowd_pass {
     }
 
     // ─────────────────────────────────────────────────────────────
-    //  3. CLOSE CAMPAIGN  (Recuperar rent)
+    //  3. BUY TICKET  (Pago + NFT Metaplex Core en una transaccion)
+    // ─────────────────────────────────────────────────────────────
+    pub fn buy_ticket(
+        ctx: Context<BuyTicket>,
+        ticket_name: String,
+        ticket_uri: String,
+    ) -> Result<()> {
+        require!(!ticket_name.is_empty(), CrowdBlinksError::InvalidTicketName);
+        require!(ticket_name.len() <= 64, CrowdBlinksError::InvalidTicketName);
+        require!(!ticket_uri.is_empty(), CrowdBlinksError::InvalidTicketUri);
+        require!(ticket_uri.len() <= 200, CrowdBlinksError::InvalidTicketUri);
+
+        let campaign = &mut ctx.accounts.campaign;
+
+        require!(campaign.is_active, CrowdBlinksError::CampaignInactive);
+        require!(
+            campaign.tickets_sold < campaign.max_tickets,
+            CrowdBlinksError::SoldOut
+        );
+
+        let ticket_price = campaign.ticket_price;
+        require!(ticket_price > 0, CrowdBlinksError::InvalidTicketPrice);
+
+        let buyer_info = ctx.accounts.buyer.to_account_info();
+        let organizer_info = ctx.accounts.organizer.to_account_info();
+        let ticket_asset_info = ctx.accounts.ticket_asset.to_account_info();
+        let core_program_info = ctx.accounts.core_program.to_account_info();
+        let system_program_info = ctx.accounts.system_program.to_account_info();
+
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.buyer.key(),
+                &ctx.accounts.organizer.key(),
+                ticket_price,
+            ),
+            &[
+                buyer_info.clone(),
+                organizer_info,
+                system_program_info.clone(),
+            ],
+        )?;
+
+        CreateV1CpiBuilder::new(&core_program_info)
+            .asset(&ticket_asset_info)
+            .collection(None)
+            .authority(Some(&buyer_info))
+            .payer(&buyer_info)
+            .owner(Some(&buyer_info))
+            .update_authority(Some(&buyer_info))
+            .system_program(&system_program_info)
+            .name(ticket_name)
+            .uri(ticket_uri)
+            .invoke()?;
+
+        campaign.tickets_sold = campaign
+            .tickets_sold
+            .checked_add(1)
+            .ok_or(CrowdBlinksError::Overflow)?;
+
+        if campaign.tickets_sold >= campaign.max_tickets {
+            campaign.is_active = false;
+            msg!(
+                "CrowdBlinks OK Evento '{}' agotado (sold out).",
+                campaign.event_id
+            );
+        }
+
+        Ok(())
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    //  4. CLOSE CAMPAIGN  (Recuperar rent)
     // ─────────────────────────────────────────────────────────────
     pub fn close_campaign(ctx: Context<CloseCampaign>) -> Result<()> {
         msg!(
@@ -196,6 +272,27 @@ pub struct SupportCampaign<'info> {
 }
 
 #[derive(Accounts)]
+pub struct BuyTicket<'info> {
+    #[account(
+        mut,
+        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
+        bump
+    )]
+    pub campaign: Account<'info, CampaignState>,
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+    /// CHECK: recibe el pago; se fija contra campaign.authority para evitar desvio de fondos.
+    #[account(mut, address = campaign.authority @ CrowdBlinksError::InvalidOrganizer)]
+    pub organizer: AccountInfo<'info>,
+    #[account(mut)]
+    pub ticket_asset: Signer<'info>,
+    /// CHECK: validado por address contra el programa oficial de Metaplex Core.
+    #[account(address = mpl_core::ID)]
+    pub core_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct CloseCampaign<'info> {
     #[account(
         mut,
@@ -224,14 +321,13 @@ pub struct CampaignState {
 }
 
 impl CampaignState {
-    pub const SPACE: usize =
-          8   // discriminator
+    pub const SPACE: usize = 8   // discriminator
         + 32  // authority
         + 36  // event_id (4 prefijo + 32 chars max)
         + 8   // ticket_price
         + 2   // max_tickets (u16)
         + 2   // tickets_sold (u16)
-        + 1;  // is_active
+        + 1; // is_active
 }
 
 // ================================================================
@@ -254,4 +350,12 @@ pub enum CrowdBlinksError {
     InvalidTreasury,
     #[msg("Desbordamiento aritmético detectado.")]
     Overflow,
+    #[msg("El evento ya no tiene boletos disponibles.")]
+    SoldOut,
+    #[msg("El organizador no coincide con la autoridad de la campaña.")]
+    InvalidOrganizer,
+    #[msg("El nombre del boleto no puede estar vacio ni superar 64 caracteres.")]
+    InvalidTicketName,
+    #[msg("La URI del boleto no puede estar vacia ni superar 200 caracteres.")]
+    InvalidTicketUri,
 }

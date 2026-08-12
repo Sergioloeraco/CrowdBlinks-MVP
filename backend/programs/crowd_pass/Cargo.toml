@@ -20,3 +20,4 @@ idl-build = [
 
 [dependencies]
 anchor-lang = "1.1.2"
+mpl-core = "0.12.1"
