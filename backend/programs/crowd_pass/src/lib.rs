@@ -13,7 +13,6 @@
 // ================================================================
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_lang::system_program;
 
 declare_id!("AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb");
@@ -49,8 +48,6 @@ pub mod crowd_pass {
 
         let campaign = &mut ctx.accounts.campaign;
         campaign.authority = ctx.accounts.authority.key();
-        campaign.event_id = event_id.clone();
-        campaign.ticket_price = ticket_price;
         campaign.event_id = event_id.clone();
         campaign.ticket_price = ticket_price;
         campaign.max_tickets = max_tickets;
@@ -107,8 +104,6 @@ pub mod crowd_pass {
                 from: ctx.accounts.supporter.to_account_info(),
                 to: ctx.accounts.treasury.to_account_info(),
             },
-                to: ctx.accounts.treasury.to_account_info(),
-            },
         );
         system_program::transfer(cpi_treasury, fee_amount)?;
 
@@ -141,7 +136,6 @@ pub struct InitializeCampaign<'info> {
         init,
         payer = authority,
         space = CampaignState::SPACE,
-        space = CampaignState::SPACE,
         seeds = [b"campaign", authority.key().as_ref(), event_id.as_bytes()],
         bump
     )]
@@ -155,9 +149,6 @@ pub struct InitializeCampaign<'info> {
 pub struct SupportCampaign<'info> {
     #[account(
         mut,
-        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
-        bump,
-        has_one = authority
         seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
         bump,
         has_one = authority
@@ -179,10 +170,7 @@ pub struct CloseCampaign<'info> {
     #[account(
         mut,
         seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
-        seeds = [b"campaign", campaign.authority.as_ref(), campaign.event_id.as_bytes()],
         bump,
-        has_one = authority,
-        close = authority
         has_one = authority,
         close = authority
     )]
@@ -193,12 +181,6 @@ pub struct CloseCampaign<'info> {
 
 #[account]
 pub struct CampaignState {
-    pub authority: Pubkey,
-    pub event_id: String,
-    pub ticket_price: u64,
-    pub max_tickets: u16,
-    pub tickets_sold: u16,
-    pub is_active: bool,
     pub authority: Pubkey,
     pub event_id: String,
     pub ticket_price: u64,
@@ -221,7 +203,6 @@ pub enum CrowdBlinksError {
     InvalidMaxTickets,
     #[msg("Este evento no esta activo o ya se agoto.")]
     CampaignInactive,
-    #[msg("El monto enviado no coincide con el precio del boleto.")]
     #[msg("El monto enviado no coincide con el precio del boleto.")]
     IncorrectPaymentAmount,
     #[msg("La cuenta de tesoreria no coincide con la esperada.")]
