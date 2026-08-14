@@ -9,11 +9,14 @@ skip-lint = false
 crowd_pass = "AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb"
 
 [programs.localnet]
-crowd_pass = "AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb"
+crowd_pass = "5fzvHz3mtSkqAKwh5mnWbdmfjq4VzXVhW4cJFXzorveN"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
+
+[test]
+startup_wait = 30000
 
 [workspace]
 members = ["programs/crowd_pass"]

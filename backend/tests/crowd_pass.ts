@@ -119,12 +119,6 @@ describe("CrowdBlinks ticketing contract", () => {
   });
 
   it("rejects invalid event setup", async () => {
-    const [pda] = findCampaignPda(
-      program.programId,
-      organizer.publicKey,
-      "bad-event"
-    );
-
     try {
       await program.methods
         .initializeCampaign("bad-event", new BN(0), 1)
@@ -153,20 +147,36 @@ describe("CrowdBlinks ticketing contract", () => {
       treasury
     );
 
-    const price = TICKET_PRICE.toNumber();
+    const supporterBefore = await getBalance(
+      connection,
+      supporter1.publicKey
+    );
 
+    const price = TICKET_PRICE.toNumber();
     const fee = Math.floor(
       (price * 100) / 10_000
     );
 
     const organizerAmount = price - fee;
 
+    console.log("DEBUG payment before", {
+      organizerBefore,
+      treasuryBefore,
+      supporterBefore,
+      price,
+      fee,
+      organizerAmount,
+    });
+
     await program.methods
       .supportCampaign(TICKET_PRICE)
       .accounts({
+        campaign: eventPda,
         supporter: supporter1.publicKey,
+        authority: organizer.publicKey,
         treasury,
-      })
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
       .signers([supporter1])
       .rpc();
 
@@ -179,6 +189,20 @@ describe("CrowdBlinks ticketing contract", () => {
       connection,
       treasury
     );
+
+    const supporterAfter = await getBalance(
+      connection,
+      supporter1.publicKey
+    );
+
+    console.log("DEBUG payment after", {
+      organizerAfter,
+      treasuryAfter,
+      supporterAfter,
+      organizerDelta: organizerAfter - organizerBefore,
+      treasuryDelta: treasuryAfter - treasuryBefore,
+      supporterDelta: supporterAfter - supporterBefore,
+    });
 
     const state =
       await program.account.campaignState.fetch(eventPda);
@@ -204,9 +228,12 @@ describe("CrowdBlinks ticketing contract", () => {
           new BN(0.05 * LAMPORTS_PER_SOL)
         )
         .accounts({
+          campaign: eventPda,
           supporter: supporter2.publicKey,
+          authority: organizer.publicKey,
           treasury,
-        })
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
         .signers([supporter2])
         .rpc();
 
@@ -221,9 +248,12 @@ describe("CrowdBlinks ticketing contract", () => {
       await program.methods
         .supportCampaign(TICKET_PRICE)
         .accounts({
+          campaign: eventPda,
           supporter: supporter2.publicKey,
+          authority: organizer.publicKey,
           treasury: wrongTreasury.publicKey,
-        })
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
         .signers([supporter2])
         .rpc();
 
@@ -239,9 +269,12 @@ describe("CrowdBlinks ticketing contract", () => {
     await program.methods
       .supportCampaign(TICKET_PRICE)
       .accounts({
+        campaign: eventPda,
         supporter: supporter2.publicKey,
+        authority: organizer.publicKey,
         treasury,
-      })
+        systemProgram: anchor.web3.SystemProgram.programId,
+      } as any)
       .signers([supporter2])
       .rpc();
 
@@ -262,9 +295,12 @@ describe("CrowdBlinks ticketing contract", () => {
       await program.methods
         .supportCampaign(TICKET_PRICE)
         .accounts({
+          campaign: eventPda,
           supporter: supporter1.publicKey,
+          authority: organizer.publicKey,
           treasury,
-        })
+          systemProgram: anchor.web3.SystemProgram.programId,
+        } as any)
         .signers([supporter1])
         .rpc();
 
@@ -277,6 +313,15 @@ describe("CrowdBlinks ticketing contract", () => {
   });
 
   it("closes an event and recovers rent for the organizer", async () => {
+    const organizerBeforeInitialize = await getBalance(
+      connection,
+      organizer.publicKey
+    );
+
+    console.log("DEBUG close organizer before initialize", {
+      organizerBeforeInitialize,
+    });
+
     await program.methods
       .initializeCampaign(
         CLOSE_EVENT_ID,
@@ -289,16 +334,45 @@ describe("CrowdBlinks ticketing contract", () => {
       .signers([organizer])
       .rpc();
 
+    const organizerAfterInitialize = await getBalance(
+      connection,
+      organizer.publicKey
+    );
+
+    const closePdaBeforeClose =
+      await connection.getAccountInfo(closeEventPda);
+
+    console.log("DEBUG close after initialize", {
+      organizerAfterInitialize,
+      initializeDelta:
+        organizerAfterInitialize - organizerBeforeInitialize,
+      closePdaLamportsBeforeClose:
+        closePdaBeforeClose?.lamports ?? null,
+    });
+
     const organizerBefore = await getBalance(
       connection,
       organizer.publicKey
     );
 
-    await program.methods
+    console.log("DEBUG close before", { organizerBefore });
+
+    const closeSig = await program.methods
       .closeCampaign()
-      .accounts({})
+      .accounts({
+        campaign: closeEventPda,
+        authority: organizer.publicKey,
+      } as any)
       .signers([organizer])
       .rpc();
+
+    const closeTx = await connection.getTransaction(
+      closeSig,
+      {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      }
+    );
 
     const organizerAfter = await getBalance(
       connection,
@@ -307,6 +381,17 @@ describe("CrowdBlinks ticketing contract", () => {
 
     const closedAccount =
       await connection.getAccountInfo(closeEventPda);
+
+    const closePdaLamportsAfterClose =
+      closedAccount?.lamports ?? null;
+
+    console.log("DEBUG close after", {
+      organizerAfter,
+      organizerDelta: organizerAfter - organizerBefore,
+      closedAccount: !!closedAccount,
+      accountLamports: closePdaLamportsAfterClose,
+      closeTxFee: closeTx?.meta?.fee ?? null,
+    });
 
     assert.equal(closedAccount, null);
     assert.ok(
@@ -318,7 +403,10 @@ describe("CrowdBlinks ticketing contract", () => {
     try {
       await program.methods
         .closeCampaign()
-        .accounts({})
+        .accounts({
+          campaign: closeEventPda,
+          authority: stranger.publicKey,
+        } as any)
         .signers([stranger])
         .rpc();
 
@@ -326,6 +414,15 @@ describe("CrowdBlinks ticketing contract", () => {
         "expected close constraint failure"
       );
     } catch (err: any) {
+      console.log("ERROR:", err);
+      console.log("MESSAGE:", err?.message);
+      console.log("ERROR OBJECT:", err?.error);
+      console.log("ERROR CODE:", err?.error?.errorCode);
+      console.log(
+        "ERROR NUMBER:",
+        err?.error?.errorCodeNumber
+      );
+      console.log("ERROR NAME:", err?.name);
       assert.ok(
         err.message.includes("ConstraintSeeds") ||
         err.message.includes("ConstraintHasOne") ||
@@ -335,3 +432,4 @@ describe("CrowdBlinks ticketing contract", () => {
     }
   });
 });
+
