@@ -40,7 +40,7 @@ async function getBalance(
   connection: anchor.web3.Connection,
   pubkey: PublicKey
 ): Promise<number> {
-  return connection.getBalance(pubkey, "confirmed");
+  return connection.getBalance(pubkey, "processed");
 }
 
 describe("CrowdBlinks ticketing contract", () => {
@@ -63,12 +63,14 @@ describe("CrowdBlinks ticketing contract", () => {
 
   const EVENT_ID = "ticket-event";
   const CLOSE_EVENT_ID = "close-event";
+  const UNAUTHORIZED_CLOSE_EVENT_ID = "unauthorized-close-event";
 
   const TICKET_PRICE = new BN(0.1 * LAMPORTS_PER_SOL);
   const MAX_TICKETS = 2;
 
   let eventPda: PublicKey;
   let closeEventPda: PublicKey;
+  let unauthorizedCloseEventPda: PublicKey;
 
   before(async () => {
     await Promise.all([
@@ -88,6 +90,12 @@ describe("CrowdBlinks ticketing contract", () => {
       program.programId,
       organizer.publicKey,
       CLOSE_EVENT_ID
+    );
+
+    [unauthorizedCloseEventPda] = findCampaignPda(
+      program.programId,
+      organizer.publicKey,
+      UNAUTHORIZED_CLOSE_EVENT_ID
     );
   });
 
@@ -153,6 +161,7 @@ describe("CrowdBlinks ticketing contract", () => {
     );
 
     const price = TICKET_PRICE.toNumber();
+
     const fee = Math.floor(
       (price * 100) / 10_000
     );
@@ -199,9 +208,12 @@ describe("CrowdBlinks ticketing contract", () => {
       organizerAfter,
       treasuryAfter,
       supporterAfter,
-      organizerDelta: organizerAfter - organizerBefore,
-      treasuryDelta: treasuryAfter - treasuryBefore,
-      supporterDelta: supporterAfter - supporterBefore,
+      organizerDelta:
+        organizerAfter - organizerBefore,
+      treasuryDelta:
+        treasuryAfter - treasuryBefore,
+      supporterDelta:
+        supporterAfter - supporterBefore,
     });
 
     const state =
@@ -237,7 +249,9 @@ describe("CrowdBlinks ticketing contract", () => {
         .signers([supporter2])
         .rpc();
 
-      assert.fail("expected IncorrectPaymentAmount");
+      assert.fail(
+        "expected IncorrectPaymentAmount"
+      );
     } catch (err: any) {
       assert.ok(
         err.message.includes("IncorrectPaymentAmount")
@@ -279,7 +293,9 @@ describe("CrowdBlinks ticketing contract", () => {
       .rpc();
 
     const soldOutState =
-      await program.account.campaignState.fetch(eventPda);
+      await program.account.campaignState.fetch(
+        eventPda
+      );
 
     assert.equal(
       soldOutState.ticketsSold,
@@ -313,14 +329,11 @@ describe("CrowdBlinks ticketing contract", () => {
   });
 
   it("closes an event and recovers rent for the organizer", async () => {
-    const organizerBeforeInitialize = await getBalance(
-      connection,
-      organizer.publicKey
-    );
-
-    console.log("DEBUG close organizer before initialize", {
-      organizerBeforeInitialize,
-    });
+    const organizerBeforeInitialize =
+      await getBalance(
+        connection,
+        organizer.publicKey
+      );
 
     await program.methods
       .initializeCampaign(
@@ -334,77 +347,116 @@ describe("CrowdBlinks ticketing contract", () => {
       .signers([organizer])
       .rpc();
 
-    const organizerAfterInitialize = await getBalance(
-      connection,
-      organizer.publicKey
-    );
-
     const closePdaBeforeClose =
-      await connection.getAccountInfo(closeEventPda);
+      await connection.getAccountInfo(
+        closeEventPda
+      );
 
-    console.log("DEBUG close after initialize", {
-      organizerAfterInitialize,
-      initializeDelta:
-        organizerAfterInitialize - organizerBeforeInitialize,
-      closePdaLamportsBeforeClose:
-        closePdaBeforeClose?.lamports ?? null,
-    });
+    const organizerBefore =
+      await getBalance(
+        connection,
+        organizer.publicKey
+      );
 
-    const organizerBefore = await getBalance(
-      connection,
-      organizer.publicKey
-    );
-
-    console.log("DEBUG close before", { organizerBefore });
-
-    const closeSig = await program.methods
-      .closeCampaign()
-      .accounts({
-        campaign: closeEventPda,
-        authority: organizer.publicKey,
-      } as any)
-      .signers([organizer])
-      .rpc();
-
-    const closeTx = await connection.getTransaction(
-      closeSig,
-      {
-        commitment: "confirmed",
-        maxSupportedTransactionVersion: 0,
-      }
-    );
-
-    const organizerAfter = await getBalance(
-      connection,
-      organizer.publicKey
-    );
-
-    const closedAccount =
-      await connection.getAccountInfo(closeEventPda);
-
-    const closePdaLamportsAfterClose =
-      closedAccount?.lamports ?? null;
-
-    console.log("DEBUG close after", {
-      organizerAfter,
-      organizerDelta: organizerAfter - organizerBefore,
-      closedAccount: !!closedAccount,
-      accountLamports: closePdaLamportsAfterClose,
-      closeTxFee: closeTx?.meta?.fee ?? null,
-    });
-
-    assert.equal(closedAccount, null);
+    assert.ok(closePdaBeforeClose);
     assert.ok(
-      organizerAfter > organizerBefore
+      closePdaBeforeClose.lamports > 0
     );
-  });
 
-  it("rejects close attempts from non-authority wallets", async () => {
-    try {
+    console.log("DEBUG close before", {
+      organizerBeforeInitialize,
+      organizerBefore,
+      closePdaLamports:
+        closePdaBeforeClose.lamports,
+    });
+
+    const closeSig =
       await program.methods
         .closeCampaign()
         .accounts({
           campaign: closeEventPda,
+          authority: organizer.publicKey,
+        } as any)
+        .signers([organizer])
+        .rpc();
+
+    const organizerAfter =
+      await getBalance(
+        connection,
+        organizer.publicKey
+      );
+
+    const closedAccount =
+      await connection.getAccountInfo(
+        closeEventPda
+      );
+
+    const closeTx =
+      await connection.getTransaction(
+        closeSig,
+        {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        }
+      );
+
+    const closeTxFee =
+      closeTx?.meta?.fee ?? 0;
+
+    const organizerDelta =
+      organizerAfter - organizerBefore;
+
+    console.log("DEBUG close after", {
+      organizerAfter,
+      organizerDelta,
+      closedAccount: !!closedAccount,
+      closeTxFee,
+    });
+
+    assert.equal(
+      closedAccount,
+      null
+    );
+
+    // La cuenta debe desaparecer y el organizador
+    // debe recuperar prácticamente todo el rent.
+    // Se descuenta la comisión de la transacción.
+    assert.ok(
+      organizerDelta > 0,
+      `Expected organizer to recover rent, delta=${organizerDelta}`
+    );
+  });
+
+  it("rejects close attempts from non-authority wallets", async () => {
+    // Crear una cuenta independiente que permanecerá
+    // abierta durante este test.
+    await program.methods
+      .initializeCampaign(
+        UNAUTHORIZED_CLOSE_EVENT_ID,
+        TICKET_PRICE,
+        1
+      )
+      .accounts({
+        authority: organizer.publicKey,
+      })
+      .signers([organizer])
+      .rpc();
+
+    const accountBefore =
+      await connection.getAccountInfo(
+        unauthorizedCloseEventPda
+      );
+
+    assert.ok(
+      accountBefore,
+      "Unauthorized-close campaign should exist before the attack"
+    );
+
+    try {
+      await program.methods
+        .closeCampaign()
+        .accounts({
+          campaign: unauthorizedCloseEventPda,
           authority: stranger.publicKey,
         } as any)
         .signers([stranger])
@@ -414,22 +466,41 @@ describe("CrowdBlinks ticketing contract", () => {
         "expected close constraint failure"
       );
     } catch (err: any) {
-      console.log("ERROR:", err);
-      console.log("MESSAGE:", err?.message);
-      console.log("ERROR OBJECT:", err?.error);
-      console.log("ERROR CODE:", err?.error?.errorCode);
+      const errorCode =
+        err?.error?.errorCode?.code;
+
+      const errorMessage =
+        err?.error?.errorMessage ??
+        err?.message ??
+        "";
+
       console.log(
-        "ERROR NUMBER:",
-        err?.error?.errorCodeNumber
+        "DEBUG unauthorized close",
+        {
+          errorCode,
+          errorMessage,
+        }
       );
-      console.log("ERROR NAME:", err?.name);
+
       assert.ok(
-        err.message.includes("ConstraintSeeds") ||
-        err.message.includes("ConstraintHasOne") ||
-        err.message.includes("unknown signer") ||
-        err.message.includes("Signature verification failed")
+        errorCode === "ConstraintHasOne" ||
+        errorCode === "ConstraintSeeds" ||
+        errorMessage.includes("ConstraintHasOne") ||
+        errorMessage.includes("ConstraintSeeds"),
+        `Unexpected error: ${errorMessage}`
       );
     }
+
+    // La cuenta debe seguir existiendo porque
+    // el intento de cierre fue rechazado.
+    const accountAfter =
+      await connection.getAccountInfo(
+        unauthorizedCloseEventPda
+      );
+
+    assert.ok(
+      accountAfter,
+      "Campaign must remain initialized after unauthorized close attempt"
+    );
   });
 });
-
