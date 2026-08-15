@@ -1,11 +1,11 @@
 /* ================================================================
-   CrowdPass — Estilos Globales
+  CrowdBlinks — Estilos Globales
    /frontend/app/globals.css
 
    Incluye:
    - Reset y variables CSS base
    - Override del modal de wallet-adapter para que se vea
-     coherente con la estética dark/Solana de CrowdPass
+     coherente con la estética dark/Solana de CrowdBlinks
    - Scrollbar personalizada
 ================================================================ */
 
@@ -87,7 +87,7 @@ img, svg { display: block; max-width: 100%; }
 /* ================================================================
    WALLET ADAPTER MODAL — Overrides de estética
    Sobreescribe los estilos por defecto del modal de selección
-   de wallet para que encaje con el diseño de CrowdPass.
+  de wallet para que encaje con el diseño de CrowdBlinks.
 ================================================================ */
 
 /* Overlay / backdrop */
@@ -179,7 +179,7 @@ img, svg { display: block; max-width: 100%; }
 }
 
 /* ================================================================
-   COMPONENTES CROWDPASS (Página principal)
+  COMPONENTES CROWDBLINKS (Página principal)
 ================================================================ */
 .page-wrap { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
@@ -198,7 +198,7 @@ input:focus { border-color: var(--sol-purple); background: rgba(153, 69, 255, 0.
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .status { margin-top: 16px; font-size: 14px; text-align: center; }
 .status.error { color: #ff5555; background: rgba(255, 85, 85, 0.1); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 85, 85, 0.3); }
-.campaign-list { display: flex; flex-direction: column; gap: 16px; }
+.event-list { display: flex; flex-direction: column; gap: 16px; }
 .success-card { padding: 20px; border-left: 4px solid var(--sol-green); margin-bottom: 0 !important; }
 .url-box { margin-top: 12px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: var(--radius-sm); font-family: var(--font-mono); color: var(--sol-muted); word-break: break-all; }
 .hero { display: flex; height: 60vh; align-items: center; justify-content: center; text-align: center; }

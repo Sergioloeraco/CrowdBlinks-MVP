@@ -7,7 +7,7 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import {
-  findCampaignPda,
+  findEventPda,
   getBaseUrl,
   getConnection,
   getProgram,
@@ -28,107 +28,174 @@ interface RouteParams {
   params: { id: string };
 }
 
-export const OPTIONS = async () => new Response(null, { headers: HEADERS });
+export const OPTIONS = async () =>
+  new Response(null, { headers: HEADERS });
 
 export async function GET(req: Request, { params }: RouteParams) {
   const parsed = parseId(params.id);
 
   if (parsed.error || !parsed.authority || !parsed.eventId) {
-    return new Response("ID invalido", { status: 400, headers: HEADERS });
+    return new Response("ID invalido", {
+      status: 400,
+      headers: HEADERS,
+    });
   }
 
-  const [pda] = findCampaignPda(parsed.authority, parsed.eventId);
+  const [pda] = findEventPda(
+    parsed.authority,
+    parsed.eventId
+  );
+
   const program = getProgram();
   const baseUrl = getBaseUrl(req);
 
   try {
-    const state = await program.account.campaignState.fetch(pda);
-    const ticketPriceSol = toNumber(state.ticketPrice) / LAMPORTS_PER_SOL;
+    const state =
+      await (program.account as any).campaignState.fetch(pda)
+
+    const ticketPriceSol =
+      toNumber(state.ticketPrice) / LAMPORTS_PER_SOL;
+
     const maxTickets = toNumber(state.maxTickets);
     const ticketsSold = toNumber(state.ticketsSold);
+
     const soldOut = ticketsSold >= maxTickets;
     const isActive = state.isActive && !soldOut;
 
     return NextResponse.json(
       {
         type: "action",
-        icon: `${baseUrl}/api/actions/campaign/${params.id}/image`,
+        icon: `${baseUrl}/api/actions/event/${params.id}/image`,
         title: `CrowdBlinks: ${state.eventId}`,
         description:
           `Boleto on-chain para ${state.eventId}.\n\n` +
           `Precio: ${ticketPriceSol} SOL\n` +
           `Boletos: ${ticketsSold} / ${maxTickets}`,
-        label: isActive ? `Comprar boleto - ${ticketPriceSol} SOL` : "Sold out",
+        label: isActive
+          ? `Comprar boleto - ${ticketPriceSol} SOL`
+          : "Sold out",
         disabled: !isActive,
         error: !isActive
-          ? { message: "Este evento ya no esta activo o hizo sold out." }
+          ? {
+              message:
+                "Este evento ya no esta activo o hizo sold out.",
+            }
           : undefined,
         links: {
-          actions: buildActions(isActive, ticketPriceSol, params.id, baseUrl),
+          actions: buildActions(
+            isActive,
+            ticketPriceSol,
+            params.id,
+            baseUrl
+          ),
         },
       },
       { headers: HEADERS }
     );
   } catch (err) {
     console.error("[CrowdBlinks GET]", err);
+
     return NextResponse.json(
       {
         type: "action",
-        icon: `${baseUrl}/api/actions/campaign/${params.id}/image`,
+        icon: `${baseUrl}/api/actions/event/${params.id}/image`,
         title: "CrowdBlinks",
-        description: "No se encontro este evento en la blockchain.",
+        description:
+          "No se encontro este evento en la blockchain.",
         label: "Evento no disponible",
         disabled: true,
-        error: { message: "Evento no encontrado en Solana." },
+        error: {
+          message: "Evento no encontrado en Solana.",
+        },
       },
-      { status: 200, headers: HEADERS }
+      {
+        status: 200,
+        headers: HEADERS,
+      }
     );
   }
 }
 
-export async function POST(req: Request, { params }: RouteParams) {
+export async function POST(
+  req: Request,
+  { params }: RouteParams
+) {
   const parsed = parseId(params.id);
 
   if (parsed.error || !parsed.authority || !parsed.eventId) {
     return NextResponse.json(
-      { message: "ID de evento invalido." },
-      { status: 400, headers: HEADERS }
+      {
+        message: "ID de evento invalido.",
+      },
+      {
+        status: 400,
+        headers: HEADERS,
+      }
     );
   }
 
   let supporterPubkey: PublicKey;
+
   try {
     const body = await req.json();
+
     supporterPubkey = new PublicKey(body.account);
   } catch {
     return NextResponse.json(
-      { message: "Body invalido. Se requiere { account: '<pubkey>' }" },
-      { status: 400, headers: HEADERS }
+      {
+        message:
+          "Body invalido. Se requiere { account: '<pubkey>' }",
+      },
+      {
+        status: 400,
+        headers: HEADERS,
+      }
     );
   }
 
   try {
-    const [pda] = findCampaignPda(parsed.authority, parsed.eventId);
+    const [pda] = findEventPda(
+      parsed.authority,
+      parsed.eventId
+    );
+
     const program = getProgram();
     const connection = getConnection();
     const treasury = getTreasuryPublicKey();
-    const state = await program.account.campaignState.fetch(pda);
+
+    const state =
+      await (program.account as any).campaignState.fetch(pda)
 
     if (!state.isActive) {
       return NextResponse.json(
-        { message: "Este evento ya no esta activo." },
-        { status: 400, headers: HEADERS }
+        {
+          message: "Este evento ya no esta activo.",
+        },
+        {
+          status: 400,
+          headers: HEADERS,
+        }
       );
     }
 
-    if (toNumber(state.ticketsSold) >= toNumber(state.maxTickets)) {
+    if (
+      toNumber(state.ticketsSold) >=
+      toNumber(state.maxTickets)
+    ) {
       return NextResponse.json(
-        { message: "Sold out: todos los boletos han sido vendidos." },
-        { status: 400, headers: HEADERS }
+        {
+          message:
+            "Sold out: todos los boletos han sido vendidos.",
+        },
+        {
+          status: 400,
+          headers: HEADERS,
+        }
       );
     }
 
     const amountLamports = state.ticketPrice as BN;
+
     const instruction = await program.methods
       .supportCampaign(amountLamports)
       .accounts({
@@ -140,7 +207,10 @@ export async function POST(req: Request, { params }: RouteParams) {
       })
       .instruction();
 
-    const { blockhash, lastValidBlockHeight } =
+    const {
+      blockhash,
+      lastValidBlockHeight,
+    } =
       await connection.getLatestBlockhash("confirmed");
 
     const transaction = new Transaction({
@@ -150,11 +220,17 @@ export async function POST(req: Request, { params }: RouteParams) {
     }).add(instruction);
 
     const serializedTx = transaction
-      .serialize({ requireAllSignatures: false, verifySignatures: false })
+      .serialize({
+        requireAllSignatures: false,
+        verifySignatures: false,
+      })
       .toString("base64");
 
     const baseUrl = getBaseUrl(req);
-    const successMessage = `Boleto comprado para ${state.eventId}. Tu entrada quedo registrada on-chain.`;
+
+    const successMessage =
+      `Boleto comprado para ${state.eventId}. ` +
+      `Tu entrada quedo registrada on-chain.`;
 
     return NextResponse.json(
       {
@@ -165,7 +241,9 @@ export async function POST(req: Request, { params }: RouteParams) {
             type: "inline",
             action: {
               type: "completed",
-              icon: `${baseUrl}/api/actions/campaign/${params.id}/image`,
+              icon:
+                `${baseUrl}/api/actions/event/` +
+                `${params.id}/image`,
               title: "Boleto confirmado",
               description: successMessage,
               label: "Ver en Explorer",
@@ -173,13 +251,23 @@ export async function POST(req: Request, { params }: RouteParams) {
           },
         },
       },
-      { headers: HEADERS }
+      {
+        headers: HEADERS,
+      }
     );
   } catch (err) {
     console.error("[CrowdBlinks POST]", err);
+
     return NextResponse.json(
-      { message: "Error al construir la transaccion. Intenta de nuevo." },
-      { status: 500, headers: HEADERS }
+      {
+        message:
+          "Error al construir la transaccion. " +
+          "Intenta de nuevo.",
+      },
+      {
+        status: 500,
+        headers: HEADERS,
+      }
     );
   }
 }
@@ -191,14 +279,32 @@ function parseId(id: string): {
 } {
   try {
     const decodedId = decodeURIComponent(id);
-    const firstUnderscore = decodedId.indexOf("_");
-    if (firstUnderscore === -1) return { error: "Formato invalido" };
 
-    const authorityStr = decodedId.slice(0, firstUnderscore).trim();
-    const eventId = decodedId.slice(firstUnderscore + 1).trim();
+    const firstUnderscore =
+      decodedId.indexOf("_");
 
-    if (!authorityStr || !eventId) return { error: "Campos vacios" };
-    return { authority: new PublicKey(authorityStr), eventId };
+    if (firstUnderscore === -1) {
+      return { error: "Formato invalido" };
+    }
+
+    const authorityStr =
+      decodedId
+        .slice(0, firstUnderscore)
+        .trim();
+
+    const eventId =
+      decodedId
+        .slice(firstUnderscore + 1)
+        .trim();
+
+    if (!authorityStr || !eventId) {
+      return { error: "Campos vacios" };
+    }
+
+    return {
+      authority: new PublicKey(authorityStr),
+      eventId,
+    };
   } catch {
     return { error: "Pubkey invalida" };
   }
@@ -215,7 +321,9 @@ function buildActions(
       {
         type: "external-link",
         label: "Ver en Explorer",
-        href: `https://explorer.solana.com/address/${id.split("_")[0]}?cluster=devnet`,
+        href:
+          `https://explorer.solana.com/address/` +
+          `${id.split("_")[0]}?cluster=devnet`,
       },
     ];
   }
@@ -223,8 +331,10 @@ function buildActions(
   return [
     {
       type: "transaction",
-      label: `Comprar boleto - ${ticketPriceSol} SOL`,
-      href: `${baseUrl}/api/actions/campaign/${id}`,
+      label:
+        `Comprar boleto - ${ticketPriceSol} SOL`,
+      href:
+        `${baseUrl}/api/actions/event/${id}`,
     },
   ];
 }

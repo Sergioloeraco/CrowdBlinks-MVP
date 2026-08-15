@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PublicKey } from "@solana/web3.js";
-import { findCampaignPda, getProgram, toNumber } from "@/lib/program";
+import { findEventPda, getProgram, toNumber } from "@/lib/program";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,8 +23,8 @@ export async function GET(_req: Request, { params }: Params) {
 
   try {
     const authority = new PublicKey(authorityStr);
-    const [pda] = findCampaignPda(authority, eventId);
-    const state = await getProgram().account.campaignState.fetch(pda);
+    const [pda] = findEventPda(authority, eventId);
+    const state = await (getProgram().account as any).campaignState.fetch(pda);
 
     title = state.eventId;
     ticketsSold = toNumber(state.ticketsSold);

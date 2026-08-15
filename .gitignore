@@ -23,4 +23,4 @@ Thumbs.db
 frontend/.env.local
 
 # Logs
-*.log
+*.log*.tsbuildinfo

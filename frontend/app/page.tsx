@@ -5,12 +5,12 @@ import dynamic from "next/dynamic";
 import { useAnchorWallet, useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider, BN, Program, setProvider } from "@anchor-lang/core";
 import { LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
-import { IDL, CrowdPass } from "../lib/idl";
+import { IDL, CrowdPass as CrowdBlinksProgram } from "../lib/idl";
 import {
-  findCampaignPda,
-  parseCampaignState,
+  findEventPda,
+  parseEventState,
   parseCrowdBlinksError,
-  ParsedCampaignState,
+  ParsedEventState,
 } from "../lib/program";
 
 const WalletMultiButton = dynamic(
@@ -20,12 +20,12 @@ const WalletMultiButton = dynamic(
 
 type TxStatus = "idle" | "building" | "confirming" | "success" | "error";
 
-type EventRow = ParsedCampaignState & {
+type EventRow = ParsedEventState & {
   pda: string;
 };
 
 export default function Dashboard() {
-  const { connected, publicKey } = useWallet();
+  const { connected, publicKey, sendTransaction } = useWallet();
   const wallet = useAnchorWallet();
   const { connection } = useConnection();
 
@@ -50,9 +50,13 @@ export default function Dashboard() {
     const provider = new AnchorProvider(connection, wallet, {
       commitment: "confirmed",
     });
+
     setProvider(provider);
 
-    return new Program<CrowdPass>(IDL as unknown as CrowdPass, { connection });
+    return new Program<CrowdBlinksProgram>(
+      IDL as unknown as CrowdBlinksProgram,
+      provider
+    );
   }, [connection, wallet]);
 
   const fetchEvents = useCallback(async () => {
@@ -60,15 +64,15 @@ export default function Dashboard() {
 
     setLoadingEvents(true);
     try {
-      const accounts = await program.account.campaignState.all([
+      const accounts = await (program.account as any).campaignState.all([
         { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
       ]);
 
       setEvents(
         accounts
-          .map((acc) => ({
+          .map((acc: any) => ({
             pda: acc.publicKey.toBase58(),
-            ...parseCampaignState(acc.account),
+            ...parseEventState(acc.account),
           }))
           .reverse()
       );
@@ -110,13 +114,13 @@ export default function Dashboard() {
         throw new Error("La capacidad debe estar entre 1 y 65535 boletos.");
       }
 
-      const [pda] = findCampaignPda(publicKey, cleanEventId);
+      const [pda] = findEventPda(publicKey, cleanEventId);
       const existing = await connection.getAccountInfo(pda);
       if (existing) throw new Error(`Ya existe un evento con el ID "${cleanEventId}".`);
 
       setStatus("confirming");
 
-      const sig = await program.methods
+      const transaction = await program.methods
         .initializeCampaign(
           cleanEventId,
           new BN(Math.round(priceSol * LAMPORTS_PER_SOL)),
@@ -127,14 +131,35 @@ export default function Dashboard() {
           authority: publicKey,
           systemProgram: SystemProgram.programId,
         })
-        .rpc();
+        .transaction();
 
-      const campaignId = `${publicKey.toBase58()}_${cleanEventId}`;
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("confirmed");
+
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = publicKey;
+
+      const sig = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
+
+      await connection.confirmTransaction(
+        {
+          signature: sig,
+          blockhash,
+          lastValidBlockHeight,
+        },
+        "confirmed"
+      );
+
+      const eventActionId = `${publicKey.toBase58()}_${cleanEventId}`;
       const origin =
         process.env.NEXT_PUBLIC_APP_URL ||
         (typeof window !== "undefined" ? window.location.origin : "");
       const blink = `https://dial.to/?action=solana-action:${encodeURIComponent(
-        `${origin}/api/actions/campaign/${campaignId}`
+        `${origin}/api/actions/event/${eventActionId}`
       )}`;
       const tweetText =
         `${cleanTitle}\n\n` +
@@ -163,13 +188,37 @@ export default function Dashboard() {
     if (!window.confirm("Cerrar este evento recuperara el rent de la cuenta.")) return;
 
     try {
-      const [pda] = findCampaignPda(publicKey, closeEventId);
+      const [pda] = findEventPda(publicKey, closeEventId);
       setLoadingEvents(true);
 
-      await program.methods
+      const transaction = await program.methods
         .closeCampaign()
-        .accounts({ campaign: pda, authority: publicKey })
-        .rpc();
+        .accounts({
+          campaign: pda,
+          authority: publicKey,
+        })
+        .transaction();
+
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash("confirmed");
+
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = publicKey;
+
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
+
+      await connection.confirmTransaction(
+        {
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        },
+        "confirmed"
+      );
 
       await fetchEvents();
     } catch (err) {
@@ -396,9 +445,9 @@ export default function Dashboard() {
                     const origin =
                       process.env.NEXT_PUBLIC_APP_URL ||
                       (typeof window !== "undefined" ? window.location.origin : "");
-                    const campaignId = `${event.authority}_${event.eventId}`;
+                    const eventActionId = `${event.authority}_${event.eventId}`;
                     const blink = `https://dial.to/?action=solana-action:${encodeURIComponent(
-                      `${origin}/api/actions/campaign/${campaignId}`
+                      `${origin}/api/actions/event/${eventActionId}`
                     )}`;
 
                     return (

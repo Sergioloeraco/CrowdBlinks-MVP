@@ -1,5 +1,5 @@
 // ================================================================
-//  CrowdPass — Root Layout
+//  CrowdBlinks — Root Layout
 //  /frontend/app/layout.tsx
 //
 //  Layout raíz de Next.js App Router. Configura:
@@ -33,23 +33,23 @@ const dmMono = DM_Mono({
 // Open Graph es clave: cuando alguien comparte el link del dashboard
 // en X, Twitter renderiza la preview card con estos metadatos.
 export const metadata: Metadata = {
-  title:       "CrowdPass — Boletos on-chain para eventos",
+  title:       "CrowdBlinks — Boletos on-chain para eventos",
   description:
     "Vende boletos o recibe donaciones para tu evento directamente desde X (Twitter). " +
     "Powered by Solana Actions & Blinks.",
 
   // Open Graph
   openGraph: {
-    title:       "CrowdPass — Boletos on-chain",
+    title:       "CrowdBlinks — Boletos on-chain",
     description: "Crea tu campaña en Solana y comparte tu Blink en X.",
-    url:         process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowdpass.vercel.app",
-    siteName:    "CrowdPass",
+    url:         process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowdblinks.vercel.app",
+    siteName:    "CrowdBlinks",
     images: [
       {
         url:    "/og-image.png",   // ← agrega una imagen 1200×630 en /public/
         width:  1200,
         height: 630,
-        alt:    "CrowdPass — Venta de boletos on-chain en Solana",
+        alt:    "CrowdBlinks — Venta de boletos on-chain en Solana",
       },
     ],
     locale: "es_MX",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card:        "summary_large_image",
-    title:       "CrowdPass — Boletos on-chain",
+    title:       "CrowdBlinks — Boletos on-chain",
     description: "Compra boletos para eventos directamente desde X. Powered by Solana Blinks.",
     images:      ["/og-image.png"],
   },
