@@ -33,7 +33,11 @@ const dmMono = DM_Mono({
 // Open Graph es clave: cuando alguien comparte el link del dashboard
 // en X, Twitter renderiza la preview card con estos metadatos.
 export const metadata: Metadata = {
-  title:       "CrowdBlinks — Boletos on-chain para eventos",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowdblinks.vercel.app"
+  ),
+
+  title: "CrowdBlinks — Boletos on-chain para eventos",
   description:
     "Vende boletos o recibe donaciones para tu evento directamente desde X (Twitter). " +
     "Powered by Solana Actions & Blinks.",
