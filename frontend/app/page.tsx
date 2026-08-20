@@ -12,6 +12,7 @@ import {
   parseCrowdBlinksError,
   ParsedEventState,
 } from "../lib/program";
+import { getEvents, EventMetadata } from "../lib/events";
 
 const WalletMultiButton = dynamic(
   async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
@@ -22,6 +23,9 @@ type TxStatus = "idle" | "building" | "confirming" | "success" | "error";
 
 type EventRow = ParsedEventState & {
   pda: string;
+  title: string;
+  description: string;
+  imageUrl: string | null;
 };
 
 export default function Dashboard() {
@@ -63,17 +67,34 @@ export default function Dashboard() {
     if (!program || !publicKey) return;
 
     setLoadingEvents(true);
+
     try {
-      const accounts = await (program.account as any).campaignState.all([
-        { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
+      const [accounts, metadata] = await Promise.all([
+        (program.account as any).campaignState.all([
+          { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
+        ]),
+        getEvents(publicKey.toBase58()),
       ]);
+
+      const metadataByPda = new Map<string, EventMetadata>(
+        metadata.map((event) => [event.campaign_pda, event])
+      );
 
       setEvents(
         accounts
-          .map((acc: any) => ({
-            pda: acc.publicKey.toBase58(),
-            ...parseEventState(acc.account),
-          }))
+          .map((acc: any) => {
+            const pda = acc.publicKey.toBase58();
+            const state = parseEventState(acc.account);
+            const eventMetadata = metadataByPda.get(pda);
+
+            return {
+              pda,
+              ...state,
+              title: eventMetadata?.title || state.eventId,
+              description: eventMetadata?.description || "",
+              imageUrl: eventMetadata?.image_url ?? null,
+            };
+          })
           .reverse()
       );
     } catch (err) {
@@ -479,7 +500,8 @@ export default function Dashboard() {
                       <div key={event.pda} className="rounded-lg p-3 bg-white/[0.03] border border-white/10">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-bold text-sm">{event.eventId}</p>
+                            <p className="font-bold text-sm">{event.title}</p>
+                            <p className="text-[10px] text-white/30">{event.eventId}</p>
                             <p className="text-xs text-white/35">
                               {event.ticketsSold}/{event.maxTickets} vendidos
                             </p>
