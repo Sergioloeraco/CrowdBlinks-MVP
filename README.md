@@ -163,7 +163,19 @@ La app corre en `http://localhost:3000`.
 
 ---
 
-## 5. Probar Blinks públicamente (ngrok)
+## 5. Supabase - metadata de eventos
+
+CrowdBlinks utiliza Supabase PostgreSQL para persistir metadata de eventos off-chain. Solana sigue siendo la fuente de verdad para tickets vendidos, disponibilidad, estado de la campaña y pagos.
+
+La `SUPABASE_SERVICE_ROLE_KEY` se utiliza únicamente server-side mediante `lib/supabase-admin.ts` y nunca debe exponerse como una variable `NEXT_PUBLIC_*`.
+
+La creación de eventos sigue el flujo:
+
+`initializeCampaign()` → confirmación on-chain → `POST /api/events` → persistencia de metadata en Supabase → generación del Blink.
+
+---
+
+## 5.1 Probar Blinks públicamente (ngrok)
 
 Para que X y las wallets puedan resolver el Blink necesitas HTTPS público:
 ```bash

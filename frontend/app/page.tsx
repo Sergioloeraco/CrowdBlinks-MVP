@@ -154,6 +154,31 @@ export default function Dashboard() {
         "confirmed"
       );
 
+      const saveEventResponse = await fetch("/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignPda: pda.toBase58(),
+          authority: publicKey.toBase58(),
+          eventId: cleanEventId,
+          title: cleanTitle,
+          description: "",
+          imageUrl: null,
+          ticketPriceLamports: Math.round(priceSol * LAMPORTS_PER_SOL),
+          maxTickets: capacity,
+        }),
+      });
+
+      if (!saveEventResponse.ok) {
+        const saveEventError = await saveEventResponse.json().catch(() => null);
+        console.error(
+          "[CrowdBlinks] Event saved on-chain but Supabase sync failed:",
+          saveEventError
+        );
+      }
+
       const eventActionId = `${publicKey.toBase58()}_${cleanEventId}`;
       const origin =
         process.env.NEXT_PUBLIC_APP_URL ||
