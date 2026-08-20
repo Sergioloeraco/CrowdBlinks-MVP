@@ -1,11 +1,14 @@
 import * as anchor from "@anchor-lang/core";
 import { BN, Program } from "@anchor-lang/core";
-import { CrowdPass } from "../target/types/crowd_pass";
 import {
   PublicKey,
   Keypair,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+
+// The generated Anchor types file is not present in this repo, so fall back to the
+// generic IDL type while keeping the program wiring intact.
+type CrowdPass = anchor.Idl;
 import assert from "assert";
 
 async function airdrop(
@@ -21,14 +24,14 @@ async function airdrop(
   await connection.confirmTransaction(sig, "confirmed");
 }
 
-function findCampaignPda(
+function findEventPda(
   programId: PublicKey,
   authority: PublicKey,
   eventId: string
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [
-      Buffer.from("campaign"),
+      Buffer.from("event"),
       authority.toBuffer(),
       Buffer.from(eventId),
     ],
@@ -80,19 +83,19 @@ describe("CrowdBlinks ticketing contract", () => {
       airdrop(connection, stranger.publicKey, 1),
     ]);
 
-    [eventPda] = findCampaignPda(
+    [eventPda] = findEventPda(
       program.programId,
       organizer.publicKey,
       EVENT_ID
     );
 
-    [closeEventPda] = findCampaignPda(
+    [closeEventPda] = findEventPda(
       program.programId,
       organizer.publicKey,
       CLOSE_EVENT_ID
     );
 
-    [unauthorizedCloseEventPda] = findCampaignPda(
+    [unauthorizedCloseEventPda] = findEventPda(
       program.programId,
       organizer.publicKey,
       UNAUTHORIZED_CLOSE_EVENT_ID
@@ -101,7 +104,7 @@ describe("CrowdBlinks ticketing contract", () => {
 
   it("creates an event with ticketing state", async () => {
     await program.methods
-      .initializeCampaign(EVENT_ID, TICKET_PRICE, MAX_TICKETS)
+      .initializeEvent(EVENT_ID, TICKET_PRICE, MAX_TICKETS)
       .accounts({
         authority: organizer.publicKey,
       })
@@ -109,7 +112,7 @@ describe("CrowdBlinks ticketing contract", () => {
       .rpc();
 
     const state =
-      await program.account.campaignState.fetch(eventPda);
+      await (program.account as any).eventState.fetch(eventPda);
 
     assert.equal(
       state.authority.toBase58(),
@@ -129,7 +132,7 @@ describe("CrowdBlinks ticketing contract", () => {
   it("rejects invalid event setup", async () => {
     try {
       await program.methods
-        .initializeCampaign("bad-event", new BN(0), 1)
+        .initializeEvent("bad-event", new BN(0), 1)
         .accounts({
           authority: organizer.publicKey,
         })
@@ -178,10 +181,10 @@ describe("CrowdBlinks ticketing contract", () => {
     });
 
     await program.methods
-      .supportCampaign(TICKET_PRICE)
+      .buyTicket(TICKET_PRICE)
       .accounts({
-        campaign: eventPda,
-        supporter: supporter1.publicKey,
+        event: eventPda,
+        buyer: supporter1.publicKey,
         authority: organizer.publicKey,
         treasury,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -217,7 +220,7 @@ describe("CrowdBlinks ticketing contract", () => {
     });
 
     const state =
-      await program.account.campaignState.fetch(eventPda);
+      await (program.account as any).eventState.fetch(eventPda);
 
     assert.equal(
       organizerAfter - organizerBefore,
@@ -236,12 +239,12 @@ describe("CrowdBlinks ticketing contract", () => {
   it("rejects wrong ticket amount and wrong treasury account", async () => {
     try {
       await program.methods
-        .supportCampaign(
+        .buyTicket(
           new BN(0.05 * LAMPORTS_PER_SOL)
         )
         .accounts({
-          campaign: eventPda,
-          supporter: supporter2.publicKey,
+          event: eventPda,
+          buyer: supporter2.publicKey,
           authority: organizer.publicKey,
           treasury,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -260,10 +263,10 @@ describe("CrowdBlinks ticketing contract", () => {
 
     try {
       await program.methods
-        .supportCampaign(TICKET_PRICE)
+        .buyTicket(TICKET_PRICE)
         .accounts({
-          campaign: eventPda,
-          supporter: supporter2.publicKey,
+          event: eventPda,
+          buyer: supporter2.publicKey,
           authority: organizer.publicKey,
           treasury: wrongTreasury.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -281,10 +284,10 @@ describe("CrowdBlinks ticketing contract", () => {
 
   it("sells out at max capacity and blocks further purchases", async () => {
     await program.methods
-      .supportCampaign(TICKET_PRICE)
+      .buyTicket(TICKET_PRICE)
       .accounts({
-        campaign: eventPda,
-        supporter: supporter2.publicKey,
+        event: eventPda,
+        buyer: supporter2.publicKey,
         authority: organizer.publicKey,
         treasury,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -293,7 +296,7 @@ describe("CrowdBlinks ticketing contract", () => {
       .rpc();
 
     const soldOutState =
-      await program.account.campaignState.fetch(
+      await (program.account as any).eventState.fetch(
         eventPda
       );
 
@@ -309,10 +312,10 @@ describe("CrowdBlinks ticketing contract", () => {
 
     try {
       await program.methods
-        .supportCampaign(TICKET_PRICE)
+        .buyTicket(TICKET_PRICE)
         .accounts({
-          campaign: eventPda,
-          supporter: supporter1.publicKey,
+          event: eventPda,
+          buyer: supporter1.publicKey,
           authority: organizer.publicKey,
           treasury,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -320,10 +323,10 @@ describe("CrowdBlinks ticketing contract", () => {
         .signers([supporter1])
         .rpc();
 
-      assert.fail("expected CampaignInactive");
+      assert.fail("expected EventInactive");
     } catch (err: any) {
       assert.ok(
-        err.message.includes("CampaignInactive")
+        err.message.includes("EventInactive")
       );
     }
   });
@@ -336,7 +339,7 @@ describe("CrowdBlinks ticketing contract", () => {
       );
 
     await program.methods
-      .initializeCampaign(
+      .initializeEvent(
         CLOSE_EVENT_ID,
         TICKET_PRICE,
         1
@@ -372,9 +375,9 @@ describe("CrowdBlinks ticketing contract", () => {
 
     const closeSig =
       await program.methods
-        .closeCampaign()
+        .closeEvent()
         .accounts({
-          campaign: closeEventPda,
+          event: closeEventPda,
           authority: organizer.publicKey,
         } as any)
         .signers([organizer])
@@ -418,9 +421,6 @@ describe("CrowdBlinks ticketing contract", () => {
       null
     );
 
-    // La cuenta debe desaparecer y el organizador
-    // debe recuperar prácticamente todo el rent.
-    // Se descuenta la comisión de la transacción.
     assert.ok(
       organizerDelta > 0,
       `Expected organizer to recover rent, delta=${organizerDelta}`
@@ -428,10 +428,8 @@ describe("CrowdBlinks ticketing contract", () => {
   });
 
   it("rejects close attempts from non-authority wallets", async () => {
-    // Crear una cuenta independiente que permanecerá
-    // abierta durante este test.
     await program.methods
-      .initializeCampaign(
+      .initializeEvent(
         UNAUTHORIZED_CLOSE_EVENT_ID,
         TICKET_PRICE,
         1
@@ -449,14 +447,14 @@ describe("CrowdBlinks ticketing contract", () => {
 
     assert.ok(
       accountBefore,
-      "Unauthorized-close campaign should exist before the attack"
+      "Unauthorized-close event should exist before the attack"
     );
 
     try {
       await program.methods
-        .closeCampaign()
+        .closeEvent()
         .accounts({
-          campaign: unauthorizedCloseEventPda,
+          event: unauthorizedCloseEventPda,
           authority: stranger.publicKey,
         } as any)
         .signers([stranger])
@@ -491,8 +489,6 @@ describe("CrowdBlinks ticketing contract", () => {
       );
     }
 
-    // La cuenta debe seguir existiendo porque
-    // el intento de cierre fue rechazado.
     const accountAfter =
       await connection.getAccountInfo(
         unauthorizedCloseEventPda
@@ -500,7 +496,7 @@ describe("CrowdBlinks ticketing contract", () => {
 
     assert.ok(
       accountAfter,
-      "Campaign must remain initialized after unauthorized close attempt"
+      "Event must remain initialized after unauthorized close attempt"
     );
   });
 });
