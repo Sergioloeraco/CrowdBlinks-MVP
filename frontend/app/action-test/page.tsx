@@ -6,7 +6,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Transaction } from "@solana/web3.js";
 
 const ACTION_URL =
-  "https://gentile-sliding-landing.ngrok-free.dev/api/actions/event/5Ef7KDsuTB5XzHPJ3D9aX2R4seobdC5ADJb98brrCEm6_hackathon-gdl-2026";
+  "https://crowd-blinks-mvp.vercel.app/api/actions/event/2UgioYmgnL5WcDm8vZLdb3cvtigFV3xaePC3jgfHZDoG_supabase-real-2026";
 
 type ActionResponse = {
   type: string;
