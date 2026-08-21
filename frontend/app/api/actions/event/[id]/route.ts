@@ -51,7 +51,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
   try {
     const state =
-      await (program.account as any).campaignState.fetch(pda)
+      await (program.account as any).eventState.fetch(pda)
 
     const ticketPriceSol =
       toNumber(state.ticketPrice) / LAMPORTS_PER_SOL;
@@ -164,7 +164,7 @@ export async function POST(
     const treasury = getTreasuryPublicKey();
 
     const state =
-      await (program.account as any).campaignState.fetch(pda)
+      await (program.account as any).eventState.fetch(pda)
 
     if (!state.isActive) {
       return NextResponse.json(
@@ -197,10 +197,10 @@ export async function POST(
     const amountLamports = state.ticketPrice as BN;
 
     const instruction = await program.methods
-      .supportCampaign(amountLamports)
+      .buyTicket(amountLamports)
       .accounts({
-        campaign: pda,
-        supporter: supporterPubkey,
+        event: pda,
+        buyer: supporterPubkey,
         authority: parsed.authority,
         treasury,
         systemProgram: SystemProgram.programId,
