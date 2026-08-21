@@ -34,7 +34,7 @@ const dmMono = DM_Mono({
 // en X, Twitter renderiza la preview card con estos metadatos.
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowdblinks.vercel.app"
+    process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowd-blinks-mvp.vercel.app"
   ),
 
   title: "CrowdBlinks — Boletos on-chain para eventos",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     title:       "CrowdBlinks — Boletos on-chain",
     description: "Crea tu campaña en Solana y comparte tu Blink en X.",
-    url:         process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowdblinks.vercel.app",
+    url:         process.env.NEXT_PUBLIC_BASE_URL ?? "https://crowd-blinks-mvp.vercel.app",
     siteName:    "CrowdBlinks",
     images: [
       {
