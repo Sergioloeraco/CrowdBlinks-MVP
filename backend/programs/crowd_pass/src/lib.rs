@@ -27,7 +27,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb");
+declare_id!("CWvXjxVGPp4r42avcvZRF5yuaqPSNL7FkJpgdmnvuGJq");
 
 pub const TREASURY_PUBKEY: Pubkey =
     pubkey!("5Ef7KDsuTB5XzHPJ3D9aX2R4seobdC5ADJb98brrCEm6");
@@ -106,14 +106,14 @@ pub mod crowd_pass {
             from: ctx.accounts.buyer.to_account_info(),
             to: ctx.accounts.authority.to_account_info(),
         };
-        let cpi_organizer = CpiContext::new(cpi_program.clone(), cpi_organizer_accounts);
+        let cpi_organizer = CpiContext::new(cpi_program.key(), cpi_organizer_accounts);
         system_program::transfer(cpi_organizer, organizer_amount)?;
 
         let cpi_treasury_accounts = system_program::Transfer {
             from: ctx.accounts.buyer.to_account_info(),
             to: ctx.accounts.treasury.to_account_info(),
         };
-        let cpi_treasury = CpiContext::new(cpi_program, cpi_treasury_accounts);
+        let cpi_treasury = CpiContext::new(cpi_program.key(), cpi_treasury_accounts);
         system_program::transfer(cpi_treasury, fee_amount)?;
 
         event.tickets_sold = event

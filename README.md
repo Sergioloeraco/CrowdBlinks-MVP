@@ -6,6 +6,17 @@ Proyecto desarrollado dentro del programa **Solana Latam Labs (Solana WayLearn)*
 
 ---
 
+⚠️ **IMPORTANTE — NO TOCAR EL SMART CONTRACT SIN AUTORIZACIÓN**
+
+- **Nunca** ejecutar `anchor keys sync`, `anchor deploy` ni editar `declare_id!()` en `backend/programs/crowd_pass/src/lib.rs` sin autorización expresa del equipo responsable.
+- El Program ID canónico en Devnet es `AAMoMd6pMFKkSwWuvyG6XNUh1wa3UBv4jbmdtQ8nmTb`. Usar otra clave pública romperá la compatibilidad con el frontend y la metadata existente.
+- En el repositorio existen keypairs legacy en `backend/target/deploy/crowd_pass-keypair.json` (y posibles variantes en `target/deploy/`) que derivan un `pubkey` distinto — **NO** deben usarse ni distribuirse.
+- Si necesitas desplegar o sincronizar en Devnet, coordina con el equipo: sigue el flujo documentado más abajo y pide la `upgrade-authority`/keypair apropia.
+
+---
+
+---
+
 ## Stack
 
 | Capa | Tecnología |
