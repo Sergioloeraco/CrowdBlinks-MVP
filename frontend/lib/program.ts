@@ -36,7 +36,13 @@ export function getProgram(): Program<CrowdBlinksProgram> {
 
   // Anchor 1.x uses the renamed TS client package and native 1.x IDL shape.
   // Keeping this direct avoids a lossy adapter from old @coral-xyz/anchor IDLs.
-  return new Program<CrowdBlinksProgram>(IDL as unknown as CrowdBlinksProgram, { connection });
+  // Construct Program with the canonical PROGRAM_ID and the provider so
+  // `.account` and CPI helpers work correctly on server-side code.
+  return new Program<CrowdBlinksProgram>(
+    IDL as unknown as CrowdBlinksProgram,
+    PROGRAM_ID,
+    provider
+  );
 }
 
 export function findEventPda(
