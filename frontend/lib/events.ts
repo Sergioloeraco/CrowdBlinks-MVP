@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { getSupabaseClient } from "./supabase";
 
 export type EventMetadata = {
   campaign_pda: string;
@@ -13,6 +13,8 @@ export type EventMetadata = {
 };
 
 export async function getEvents(authority: string): Promise<EventMetadata[]> {
+  const supabase = getSupabaseClient();
+
   const { data, error } = await supabase
     .from("events")
     .select(
