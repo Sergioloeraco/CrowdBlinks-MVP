@@ -204,7 +204,7 @@ export default function Dashboard() {
       const origin =
         process.env.NEXT_PUBLIC_APP_URL ||
         (typeof window !== "undefined" ? window.location.origin : "");
-      const blink = `${origin}/api/actions/event/${eventActionId}`;
+      const blink = `${origin}/buy/${encodeURIComponent(eventActionId)}`;
       const tweetText =
         `${cleanTitle}\n\n` +
         `Compra tu boleto por ${priceSol} SOL con Solana Blinks.\n\n` +
@@ -490,7 +490,7 @@ export default function Dashboard() {
                       process.env.NEXT_PUBLIC_APP_URL ||
                       (typeof window !== "undefined" ? window.location.origin : "");
                     const eventActionId = `${event.authority}_${event.eventId}`;
-                    const blink = `${origin}/api/actions/event/${eventActionId}`;
+                    const blink = `${origin}/buy/${encodeURIComponent(eventActionId)}`;
 
                     return (
                       <div key={event.pda} className="rounded-lg p-3 bg-white/[0.03] border border-white/10">
