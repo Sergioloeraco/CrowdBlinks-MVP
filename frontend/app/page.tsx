@@ -865,7 +865,7 @@ export default function Dashboard() {
                 eventos y publicar Blinks.
               </p>
 
-              <WalletConnectButton />
+              <WalletMultiButton />
             </div>
           )}
         </section>

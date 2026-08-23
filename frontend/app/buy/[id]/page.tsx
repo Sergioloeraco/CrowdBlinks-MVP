@@ -22,9 +22,24 @@ export default function BuyTicketPage() {
   const {
     publicKey,
     connected,
+    connecting,
+    wallet,
+    connect,
     sendTransaction,
     disconnect,
   } = useWallet();
+
+  function handleWalletButtonClick() {
+    if (!wallet) {
+      setVisible(true);
+      return;
+    }
+    if (!connected && !connecting) {
+      connect().catch((err) => {
+        console.error("[CrowdBlinks] connect error:", err);
+      });
+    }
+  }
 
   const [mounted, setMounted] = useState(false);
   const [action, setAction] = useState<ActionResponse | null>(null);
@@ -82,7 +97,7 @@ export default function BuyTicketPage() {
 
   async function buyTicket() {
     if (!publicKey) {
-      setVisible(true);
+      handleWalletButtonClick();
       return;
     }
 
@@ -238,18 +253,20 @@ export default function BuyTicketPage() {
             </button>
           ) : (
             <button
-              onClick={() => setVisible(true)}
+              onClick={handleWalletButtonClick}
+              disabled={connecting}
               style={{
                 padding: "9px 14px",
                 borderRadius: "8px",
                 border: "none",
                 background: "#9945FF",
                 color: "white",
-                cursor: "pointer",
+                cursor: connecting ? "not-allowed" : "pointer",
                 fontWeight: 700,
+                opacity: connecting ? 0.6 : 1,
               }}
             >
-              Connect Wallet
+              {!wallet ? "Connect Wallet" : connecting ? "Conectando..." : `Conectar ${wallet.adapter.name}`}
             </button>
           )}
         </header>
