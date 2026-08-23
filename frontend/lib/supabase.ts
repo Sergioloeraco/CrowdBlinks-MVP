@@ -1,11 +1,16 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
+let supabaseClient: SupabaseClient | null = null;
+
 /**
- * Create and return a Supabase client on demand.
- * This avoids throwing during module import so Next.js can compile
- * pages that don't use Supabase (useful for local development).
+ * Create and return the shared Supabase client.
+ * The client is created only once and reused on subsequent calls.
  */
 export function getSupabaseClient(): SupabaseClient {
+  if (supabaseClient) {
+    return supabaseClient;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabasePublishableKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -17,5 +22,10 @@ export function getSupabaseClient(): SupabaseClient {
     );
   }
 
-  return createClient(supabaseUrl, supabasePublishableKey);
+  supabaseClient = createClient(
+    supabaseUrl,
+    supabasePublishableKey
+  );
+
+  return supabaseClient;
 }

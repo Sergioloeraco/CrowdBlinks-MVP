@@ -66,8 +66,6 @@ export default function Dashboard() {
   const fetchEvents = useCallback(async () => {
     if (!program || !publicKey) return;
 
-    setLoadingEvents(true);
-
     try {
       const [accounts, metadata] = await Promise.all([
         (program.account as any).campaignState.all([
@@ -99,10 +97,18 @@ export default function Dashboard() {
       );
     } catch (err) {
       console.error("[CrowdBlinks] fetchEvents:", err);
+    }
+  }, [program, publicKey]);
+
+  async function handleRefreshEvents() {
+    setLoadingEvents(true);
+
+    try {
+      await fetchEvents();
     } finally {
       setLoadingEvents(false);
     }
-  }, [program, publicKey]);
+  }
 
   useEffect(() => {
     if (connected && program) fetchEvents();
@@ -488,7 +494,10 @@ export default function Dashboard() {
             <div className="w-full max-w-[340px]">
               <div className="flex items-center justify-between mb-3">
                 <p style={monoLabel}>MIS EVENTOS</p>
-                <button onClick={fetchEvents} className="text-xs text-white/50">
+                <button
+                  onClick={handleRefreshEvents}
+                  className="text-xs text-white/50"
+                >
                   {loadingEvents ? "Cargando..." : "Actualizar"}
                 </button>
               </div>
