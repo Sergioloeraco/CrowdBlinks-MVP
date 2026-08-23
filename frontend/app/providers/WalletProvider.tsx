@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 
 import {
   ConnectionProvider,
@@ -11,16 +11,6 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 
 import { clusterApiUrl } from "@solana/web3.js";
-
-import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
-import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
-
-import {
-  createDefaultAuthorizationCache,
-  createDefaultChainSelector,
-  createDefaultWalletNotFoundHandler,
-  registerMwa,
-} from "@solana-mobile/wallet-standard-mobile";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
@@ -97,72 +87,7 @@ export default function WalletProvider({
    * ============================================================
    */
 
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ],
-    []
-  );
-
-  /*
-   * ============================================================
-   * MOBILE WALLET ADAPTER
-   * ============================================================
-   *
-   * MWA se registra en el navegador para permitir que wallets
-   * móviles como Phantom/Solflare puedan comunicarse con
-   * CrowdBlinks mediante Wallet Standard.
-   */
-
-  const mwaRegistered = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    if (mwaRegistered.current) {
-      return;
-    }
-
-    try {
-      registerMwa({
-        appIdentity: {
-          name: "CrowdBlinks",
-          uri: window.location.origin,
-          icon: `${window.location.origin}/favicon.ico`,
-        },
-
-        authorizationCache:
-          createDefaultAuthorizationCache(),
-
-        /*
-         * Demo Day: Devnet
-         */
-        chains: [
-          "solana:devnet",
-        ],
-
-        chainSelector:
-          createDefaultChainSelector(),
-
-        onWalletNotFound:
-          createDefaultWalletNotFoundHandler(),
-      });
-
-      mwaRegistered.current = true;
-
-      console.log(
-        "[CrowdBlinks] MWA registrado correctamente"
-      );
-    } catch (error) {
-      console.error(
-        "[CrowdBlinks] Error registrando MWA:",
-        error
-      );
-    }
-  }, []);
+  const wallets = useMemo(() => [], []);
 
   /*
    * ============================================================
