@@ -1,0 +1,7 @@
+backend/.anchor/
+backend/.anchor/test-ledger/
+backend/.anchor/test-ledger/rocksdb/
+.git/
+node_modules/
+frontend/node_modules/
+frontend/.next/

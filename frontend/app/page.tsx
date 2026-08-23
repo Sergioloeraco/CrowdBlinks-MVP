@@ -109,6 +109,18 @@ export default function Dashboard() {
     else setEvents([]);
   }, [connected, fetchEvents, program]);
 
+  useEffect(() => {
+    if (!connected || !program) return;
+
+    const interval = window.setInterval(() => {
+      void fetchEvents();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [connected, fetchEvents, program]);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!program || !publicKey) return;

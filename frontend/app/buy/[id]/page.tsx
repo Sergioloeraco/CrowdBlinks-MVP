@@ -39,42 +39,42 @@ export default function BuyTicketPage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    async function loadAction() {
-      try {
-        setLoading(true);
-        setError("");
+  async function loadAction() {
+    try {
+      setLoading(true);
+      setError("");
 
-        const response = await fetch(
-          `/api/actions/event/${encodeURIComponent(id)}`,
-          {
-            cache: "no-store",
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data?.message ??
-              `La Action respondió HTTP ${response.status}.`
-          );
+      const response = await fetch(
+        `/api/actions/event/${encodeURIComponent(id)}`,
+        {
+          cache: "no-store",
         }
+      );
 
-        setAction(data);
-      } catch (err) {
-        console.error("[CrowdBlinks BUY GET]", err);
+      const data = await response.json();
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo cargar el evento."
+      if (!response.ok) {
+        throw new Error(
+          data?.message ??
+            `La Action respondió HTTP ${response.status}.`
         );
-      } finally {
-        setLoading(false);
       }
-    }
 
+      setAction(data);
+    } catch (err) {
+      console.error("[CrowdBlinks BUY GET]", err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo cargar el evento."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     if (id) {
       loadAction();
     }
@@ -175,6 +175,8 @@ export default function BuyTicketPage() {
 
       setSignature(txSignature);
       setStatus("¡Boleto comprado correctamente!");
+
+      await loadAction();
     } catch (err) {
       console.error("[CrowdBlinks BUY]", err);
 
