@@ -37,6 +37,34 @@ function WalletDebug() {
     console.log("[CrowdBlinks DEBUG] connecting:", connecting);
   }, [wallet, publicKey, connected, connecting]);
 
+  if (true) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          bottom: 10,
+          left: 10,
+          right: 10,
+          zIndex: 99999,
+          padding: "10px",
+          borderRadius: "8px",
+          background: "#111",
+          color: "#fff",
+          fontSize: "12px",
+          fontFamily: "monospace",
+          lineHeight: 1.5,
+        }}
+      >
+        <div>Wallet: {wallet?.adapter.name ?? "null"}</div>
+        <div>Connected: {String(connected)}</div>
+        <div>Connecting: {String(connecting)}</div>
+        <div>
+          PublicKey: {publicKey?.toBase58() ?? "null"}
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
 
