@@ -1,14 +1,44 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+
 import {
   ConnectionProvider,
+  useWallet,
   WalletProvider as SolanaWalletProvider,
 } from "@solana/wallet-adapter-react";
+
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+
 import { clusterApiUrl } from "@solana/web3.js";
 
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
+import { SolflareWalletAdapter } from "@solana/wallet-adapter-solflare";
+
+import {
+  createDefaultAuthorizationCache,
+  createDefaultChainSelector,
+  createDefaultWalletNotFoundHandler,
+  registerMwa,
+} from "@solana-mobile/wallet-standard-mobile";
+
 import "@solana/wallet-adapter-react-ui/styles.css";
+
+function WalletDebug() {
+  const { wallet, publicKey, connected, connecting } = useWallet();
+
+  useEffect(() => {
+    console.log("[CrowdBlinks DEBUG] wallet:", wallet?.adapter.name ?? null);
+    console.log(
+      "[CrowdBlinks DEBUG] publicKey:",
+      publicKey?.toBase58() ?? null
+    );
+    console.log("[CrowdBlinks DEBUG] connected:", connected);
+    console.log("[CrowdBlinks DEBUG] connecting:", connecting);
+  }, [wallet, publicKey, connected, connecting]);
+
+  return null;
+}
 
 const ConnectionProviderCompat =
   ConnectionProvider as unknown as React.ComponentType<any>;
@@ -20,6 +50,12 @@ interface WalletProviderProps {
 export default function WalletProvider({
   children,
 }: WalletProviderProps) {
+  /*
+   * ============================================================
+   * SOLANA RPC
+   * ============================================================
+   */
+
   const endpoint = useMemo(
     () =>
       process.env.NEXT_PUBLIC_RPC_URL ??
@@ -27,19 +63,101 @@ export default function WalletProvider({
     []
   );
 
+  /*
+   * ============================================================
+   * WALLETS
+   * ============================================================
+   */
+
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ],
+    []
+  );
+
+  /*
+   * ============================================================
+   * MOBILE WALLET ADAPTER
+   * ============================================================
+   *
+   * MWA se registra en el navegador para permitir que wallets
+   * móviles como Phantom/Solflare puedan comunicarse con
+   * CrowdBlinks mediante Wallet Standard.
+   */
+
+  const mwaRegistered = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (mwaRegistered.current) {
+      return;
+    }
+
+    try {
+      registerMwa({
+        appIdentity: {
+          name: "CrowdBlinks",
+          uri: window.location.origin,
+          icon: `${window.location.origin}/favicon.ico`,
+        },
+
+        authorizationCache:
+          createDefaultAuthorizationCache(),
+
+        /*
+         * Demo Day: Devnet
+         */
+        chains: [
+          "solana:devnet",
+        ],
+
+        chainSelector:
+          createDefaultChainSelector(),
+
+        onWalletNotFound:
+          createDefaultWalletNotFoundHandler(),
+      });
+
+      mwaRegistered.current = true;
+
+      console.log(
+        "[CrowdBlinks] MWA registrado correctamente"
+      );
+    } catch (error) {
+      console.error(
+        "[CrowdBlinks] Error registrando MWA:",
+        error
+      );
+    }
+  }, []);
+
+  /*
+   * ============================================================
+   * PROVIDERS
+   * ============================================================
+   */
+
   return (
-    <ConnectionProviderCompat endpoint={endpoint}>
+    <ConnectionProviderCompat
+      endpoint={endpoint}
+    >
       <SolanaWalletProvider
-        wallets={[]}
-        autoConnect={true}
-        onError={(err) => {
+        wallets={wallets}
+        autoConnect={false}
+        onError={(error) => {
           console.error(
-            "[WalletAdapter ERROR]",
-            err
+            "[CrowdBlinks WalletAdapter]",
+            error
           );
         }}
       >
         <WalletModalProvider>
+          <WalletDebug />
           {children}
         </WalletModalProvider>
       </SolanaWalletProvider>
