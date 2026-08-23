@@ -67,7 +67,9 @@ export default function Dashboard() {
     if (!program || !publicKey) return;
 
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [accounts, metadata] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (program.account as any).campaignState.all([
           { memcmp: { offset: 8, bytes: publicKey.toBase58() } },
         ]),
@@ -79,7 +81,9 @@ export default function Dashboard() {
       );
 
       setEvents(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         accounts
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .map((acc: any) => {
             const pda = acc.publicKey.toBase58();
             const state = parseEventState(acc.account);
@@ -343,11 +347,11 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="grid lg:grid-cols-2 min-h-[calc(100vh-57px)]">
-        <section className="flex flex-col gap-4 p-6 overflow-y-auto border-r border-white/5">
+      <main className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100dvh-57px)] min-h-[calc(100vh-57px)]">
+        <section className="flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/5 safe-pb">
           <div>
             <p style={monoLabel}>ORGANIZADOR</p>
-            <h1 className="font-black text-2xl leading-tight tracking-tight mb-1">
+            <h1 className="font-black text-xl sm:text-2xl leading-tight tracking-tight mb-1">
               Crea eventos con boletos on-chain
             </h1>
             <p className="text-xs leading-relaxed text-white/40">
@@ -377,7 +381,7 @@ export default function Dashboard() {
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Precio boleto">
                   <input
                     value={ticketPrice}
@@ -405,7 +409,7 @@ export default function Dashboard() {
               </div>
 
               {status === "error" && errorMsg && (
-                <div className="p-3 rounded-lg text-xs leading-relaxed text-red-200 bg-red-500/10 border border-red-400/20">
+                <div className="p-3 rounded-lg text-xs leading-relaxed text-red-200 bg-red-500/10 border border-red-400/20 break-words">
                   {errorMsg}
                 </div>
               )}
@@ -413,7 +417,7 @@ export default function Dashboard() {
               <button
                 type="submit"
                 disabled={status === "building" || status === "confirming"}
-                className="mt-auto w-full py-4 rounded-lg font-black text-sm transition-all"
+                className="mt-auto w-full py-4 min-h-[44px] rounded-lg font-black text-sm transition-all touch-manipulation"
                 style={{
                   background:
                     status === "building" || status === "confirming"
@@ -430,14 +434,14 @@ export default function Dashboard() {
               </button>
             </form>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center py-8">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
                 style={{ background: "rgba(153,69,255,0.1)", border: "1px solid rgba(153,69,255,0.2)" }}
               >
                 CB
               </div>
-              <p className="text-sm max-w-xs leading-relaxed text-white/40">
+              <p className="text-sm w-full max-w-xs leading-relaxed text-white/40">
                 Conecta tu wallet para crear eventos y publicar Blinks.
               </p>
               <WalletMultiButton />
@@ -445,17 +449,17 @@ export default function Dashboard() {
           )}
         </section>
 
-        <section className="hidden lg:flex flex-col gap-5 p-6 overflow-y-auto" style={{ background: "#07050F" }}>
+        <section className="flex flex-col gap-5 p-4 sm:p-6 overflow-y-auto safe-pb" style={{ background: "#07050F" }}>
           <div>
             <p style={monoLabel}>PREVIEW DEL BLINK</p>
-            <div className="mt-3 w-full max-w-[340px] rounded-lg overflow-hidden border border-white/10">
+            <div className="mt-3 w-full sm:max-w-[340px] mx-auto lg:mx-0 rounded-lg overflow-hidden border border-white/10">
               <div
                 className="p-5 flex flex-col justify-between h-44"
                 style={{ background: "linear-gradient(135deg,#0F0B1E,#102018)" }}
               >
                 <span style={{ ...monoLabel, color: "#14F195" }}>CROWDBLINKS</span>
                 <div>
-                  <p className="font-black text-lg leading-tight">{previewTitle}</p>
+                  <p className="font-black text-lg leading-tight break-words">{previewTitle}</p>
                   <p className="mt-2 text-xs text-white/40">
                     {previewCapacity} boletos disponibles
                   </p>
@@ -471,41 +475,41 @@ export default function Dashboard() {
           </div>
 
           {status === "success" && (
-            <div className="w-full max-w-[340px] rounded-lg p-4 border border-emerald-400/20 bg-emerald-400/10">
+            <div className="w-full sm:max-w-[340px] mx-auto lg:mx-0 rounded-lg p-4 border border-emerald-400/20 bg-emerald-400/10">
               <p className="font-bold text-sm">Evento creado</p>
               <a
                 href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-emerald-200"
+                className="inline-block mt-1 text-xs text-emerald-200 break-all"
               >
                 Ver transaccion
               </a>
-              <button onClick={copyBlink} className="mt-3 w-full rounded-lg py-2 text-sm bg-white/10">
+              <button onClick={copyBlink} className="mt-3 w-full min-h-[44px] rounded-lg py-3 text-sm font-semibold bg-white/10 touch-manipulation">
                 {copied ? "Copiado" : "Copiar Blink"}
               </button>
-              <button onClick={resetForm} className="mt-2 w-full rounded-lg py-2 text-sm bg-white/5">
+              <button onClick={resetForm} className="mt-2 w-full min-h-[44px] rounded-lg py-3 text-sm font-semibold bg-white/5 touch-manipulation">
                 Crear otro evento
               </button>
             </div>
           )}
 
           {connected && (
-            <div className="w-full max-w-[340px]">
-              <div className="flex items-center justify-between mb-3">
+            <div className="w-full sm:max-w-[340px] mx-auto lg:mx-0">
+              <div className="flex items-center justify-between gap-3 mb-3">
                 <p style={monoLabel}>MIS EVENTOS</p>
                 <button
                   onClick={handleRefreshEvents}
-                  className="text-xs text-white/50"
+                  className="text-xs text-white/50 p-2 -mr-2 touch-manipulation"
                 >
                   {loadingEvents ? "Cargando..." : "Actualizar"}
                 </button>
               </div>
 
               {events.length === 0 ? (
-                <p className="py-4 text-xs text-white/30">Aun no tienes eventos.</p>
+                <p className="py-4 text-xs text-white/30 text-center lg:text-left">Aun no tienes eventos.</p>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   {events.map((event) => {
                     const origin =
                       process.env.NEXT_PUBLIC_APP_URL ||
@@ -514,17 +518,17 @@ export default function Dashboard() {
                     const blink = `${origin}/buy/${encodeURIComponent(eventActionId)}`;
 
                     return (
-                      <div key={event.pda} className="rounded-lg p-3 bg-white/[0.03] border border-white/10">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-bold text-sm">{event.title}</p>
-                            <p className="text-[10px] text-white/30">{event.eventId}</p>
-                            <p className="text-xs text-white/35">
+                      <div key={event.pda} className="rounded-lg p-4 bg-white/[0.03] border border-white/10">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm break-words">{event.title}</p>
+                            <p className="text-[10px] text-white/30 break-all">{event.eventId}</p>
+                            <p className="text-xs text-white/35 mt-1">
                               {event.ticketsSold}/{event.maxTickets} vendidos
                             </p>
                           </div>
                           <span
-                            className="text-[10px] px-2 py-1 rounded-full border"
+                            className="self-start text-[10px] px-2 py-1 rounded-full border whitespace-nowrap"
                             style={{
                               color: event.isActive ? "#14F195" : "#9945FF",
                               borderColor: event.isActive ? "rgba(20,241,149,0.3)" : "rgba(153,69,255,0.4)",
@@ -533,11 +537,11 @@ export default function Dashboard() {
                             {event.isActive ? "Activo" : event.isSoldOut ? "Sold out" : "Cerrado"}
                           </span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <a href={blink} target="_blank" rel="noopener noreferrer" className="text-xs text-purple-200">
+                        <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+                          <a href={blink} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-purple-200 p-2 -ml-2 touch-manipulation break-all">
                             Ver Blink
                           </a>
-                          <button onClick={() => handleClose(event.eventId)} className="text-xs text-red-300">
+                          <button onClick={() => handleClose(event.eventId)} className="text-xs font-semibold text-red-300 p-2 -mr-2 touch-manipulation shrink-0">
                             Cerrar
                           </button>
                         </div>
@@ -572,6 +576,6 @@ const monoLabel = {
 };
 
 const inputCls = [
-  "w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-all",
+  "w-full rounded-lg px-4 py-3 text-base sm:text-sm text-white outline-none transition-all min-h-[44px] touch-manipulation",
   "bg-white/[0.04] border border-white/10 focus:border-purple-400/40",
 ].join(" ");

@@ -10,7 +10,9 @@ import { clusterApiUrl } from "@solana/web3.js";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ConnectionProviderCompat =
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ConnectionProvider as unknown as React.ComponentType<any>;
 
 interface WalletProviderProps {

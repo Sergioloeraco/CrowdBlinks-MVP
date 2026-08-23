@@ -24,6 +24,7 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const authority = new PublicKey(authorityStr);
     const [pda] = findEventPda(authority, eventId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const state = await (getProgram().account as any).campaignState.fetch(pda);
 
     title = state.eventId;

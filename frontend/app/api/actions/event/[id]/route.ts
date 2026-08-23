@@ -51,6 +51,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
   try {
     const state =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (program.account as any).campaignState.fetch(pda)
 
     const ticketPriceSol =
@@ -164,6 +165,7 @@ export async function POST(
     const treasury = getTreasuryPublicKey();
 
     const state =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (program.account as any).campaignState.fetch(pda)
 
     if (!state.isActive) {

@@ -113,6 +113,7 @@ export type ParsedEventState = {
   isSoldOut: boolean;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseEventState(raw: any): ParsedEventState {
   const maxTickets = toNumber(raw.maxTickets);
   const ticketsSold = toNumber(raw.ticketsSold);
@@ -128,6 +129,7 @@ export function parseEventState(raw: any): ParsedEventState {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function parseCrowdBlinksError(err: any): string {
   return err?.error?.errorMessage ?? err?.message ?? "Error desconocido";
 }

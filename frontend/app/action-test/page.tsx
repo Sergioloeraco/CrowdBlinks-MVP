@@ -193,48 +193,29 @@ export default function ActionTestPage() {
 
   return (
     <main
+      className="min-h-[100dvh] min-h-screen p-4 sm:p-10 bg-[#090611] text-white safe-pb"
       style={{
-        minHeight: "100vh",
-        padding: "40px",
-        background: "#090611",
-        color: "white",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "var(--font-syne), sans-serif",
       }}
     >
       <div
-        style={{
-          maxWidth: "720px",
-          margin: "0 auto",
-        }}
+        className="w-full max-w-[720px] mx-auto"
       >
-        <h1>CrowdBlinks — Action Test</h1>
+        <h1 className="text-xl sm:text-3xl font-black mb-1">CrowdBlinks — Action Test</h1>
 
-        <p style={{ opacity: 0.7 }}>
+        <p className="text-xs sm:text-sm text-white/70">
           Cliente de prueba de Solana Actions sin dial.to.
         </p>
 
         <div
-          style={{
-            padding: "20px",
-            marginTop: "25px",
-            border: "1px solid #333",
-            borderRadius: "12px",
-          }}
+          className="p-4 sm:p-6 mt-6 border border-white/10 rounded-2xl bg-[#0F0B1E]"
         >
-          <div style={{ marginBottom: "20px" }}>
+          <div className="mb-5">
             {!connected ? (
               <button
                 type="button"
                 onClick={() => setVisible(true)}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  border: "1px solid #6d3df5",
-                  background: "#6d3df5",
-                  color: "white",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                className="px-4 py-3 min-h-[44px] rounded-lg border border-[#6d3df5] bg-[#6d3df5] text-white text-xs sm:text-sm font-semibold cursor-pointer touch-manipulation"
               >
                 Connect Wallet
               </button>
@@ -242,22 +223,14 @@ export default function ActionTestPage() {
               <button
                 type="button"
                 onClick={() => disconnect()}
-                style={{
-                  padding: "10px 20px",
-                  borderRadius: "8px",
-                  border: "1px solid #6d3df5",
-                  background: "#6d3df5",
-                  color: "white",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
+                className="px-4 py-3 min-h-[44px] rounded-lg border border-[#6d3df5] bg-[#6d3df5] text-white text-xs sm:text-sm font-semibold cursor-pointer touch-manipulation"
               >
                 Disconnect Wallet
               </button>
             )}
           </div>
 
-          <p>
+          <p className="text-xs sm:text-sm break-all mb-2">
             <strong>Wallet:</strong>{" "}
             {!mounted
               ? "Cargando..."
@@ -268,7 +241,7 @@ export default function ActionTestPage() {
 
           {mounted && (
             <>
-              <p>
+              <p className="text-xs sm:text-sm mb-2">
                 <strong>Estado:</strong>{" "}
                 {connecting
                   ? "Conectando..."
@@ -279,7 +252,7 @@ export default function ActionTestPage() {
                   : "Desconectada"}
               </p>
 
-              <p>
+              <p className="text-xs sm:text-sm mb-4">
                 <strong>Adapter:</strong>{" "}
                 {wallet?.adapter.name ?? "Ninguno"}
               </p>
@@ -288,26 +261,20 @@ export default function ActionTestPage() {
 
           <button
             onClick={loadAction}
-            style={{
-              padding: "12px 18px",
-              borderRadius: "8px",
-              border: "none",
-              cursor: "pointer",
-              marginRight: "10px",
-            }}
+            className="px-4 py-3 min-h-[44px] rounded-lg border-none bg-white/10 text-white text-xs sm:text-sm font-semibold cursor-pointer touch-manipulation mb-4"
           >
             Cargar Action
           </button>
 
           {action && (
-            <div style={{ marginTop: "25px" }}>
-              <h2>{action.title}</h2>
+            <div className="mt-6 border-t border-white/10 pt-5">
+              <h2 className="text-lg sm:text-2xl font-bold break-words">{action.title}</h2>
 
-              <p style={{ whiteSpace: "pre-line" }}>
+              <p className="whitespace-pre-line text-xs sm:text-sm text-white/70 my-3 leading-relaxed break-words">
                 {action.description}
               </p>
 
-              <p>
+              <p className="text-xs sm:text-sm">
                 <strong>Estado:</strong>{" "}
                 {action.disabled
                   ? "No disponible"
@@ -317,18 +284,11 @@ export default function ActionTestPage() {
               <button
                 onClick={buyTicket}
                 disabled={!connected || action.disabled}
-                style={{
-                  width: "100%",
-                  padding: "15px",
-                  marginTop: "15px",
-                  borderRadius: "8px",
-                  border: "none",
-                  cursor:
-                    !connected || action.disabled
-                      ? "not-allowed"
-                      : "pointer",
-                  fontWeight: "bold",
-                }}
+                className={`w-full py-4 min-h-[44px] mt-4 rounded-xl border-none text-sm font-bold transition-all touch-manipulation ${
+                  !connected || action.disabled
+                    ? "bg-white/10 text-white/40 cursor-not-allowed"
+                    : "bg-[#14F195] text-[#08060F] cursor-pointer hover:opacity-90"
+                }`}
               >
                 Comprar boleto — 0.1 SOL
               </button>
@@ -338,12 +298,7 @@ export default function ActionTestPage() {
 
         {status && (
           <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              borderRadius: "8px",
-              background: "#10251c",
-            }}
+            className="mt-5 p-4 rounded-xl bg-[#10251c] text-xs sm:text-sm text-emerald-200 leading-relaxed break-words"
           >
             {status}
           </div>
@@ -351,13 +306,7 @@ export default function ActionTestPage() {
 
         {error && (
           <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              borderRadius: "8px",
-              background: "#351414",
-              color: "#ffaaaa",
-            }}
+            className="mt-5 p-4 rounded-xl bg-[#351414] text-[#ffaaaa] text-xs sm:text-sm leading-relaxed break-words"
           >
             {error}
           </div>
@@ -365,20 +314,12 @@ export default function ActionTestPage() {
 
         {signature && (
           <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              borderRadius: "8px",
-              background: "#111b30",
-            }}
+            className="mt-5 p-4 sm:p-5 rounded-xl bg-[#111b30] text-xs sm:text-sm border border-white/5"
           >
-            <strong>Transaction Signature:</strong>
+            <strong className="block font-bold">Transaction Signature:</strong>
 
             <p
-              style={{
-                wordBreak: "break-all",
-                fontSize: "13px",
-              }}
+              className="mt-2.5 break-all text-xs opacity-70 font-mono"
             >
               {signature}
             </p>
@@ -387,7 +328,7 @@ export default function ActionTestPage() {
               href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#9f8cff" }}
+              className="inline-block mt-3 text-xs font-semibold text-[#9f8cff] hover:underline break-all"
             >
               Ver transacción en Solana Explorer
             </a>
