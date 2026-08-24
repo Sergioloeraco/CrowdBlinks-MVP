@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
   useAnchorWallet,
   useConnection,
@@ -32,36 +33,6 @@ type EventRow = ParsedEventState & {
   description: string;
   imageUrl: string | null;
 };
-
-const WalletConnectButton = dynamic(
-  async () => {
-    const { useWalletModal } =
-      await import("@solana/wallet-adapter-react-ui");
-
-    return function WalletConnectButtonComponent() {
-      const { setVisible } = useWalletModal();
-
-      return (
-        <button
-          type="button"
-          onClick={() => {
-            console.log("[CrowdBlinks] Select Wallet presionado");
-            setVisible(true);
-          }}
-          className="rounded-xl px-6 py-3 font-semibold touch-manipulation"
-          style={{
-            background: "linear-gradient(135deg,#9945FF,#14F195)",
-            color: "#fff",
-            minHeight: "44px",
-          }}
-        >
-          Select Wallet
-        </button>
-      );
-    };
-  },
-  { ssr: false }
-);
 
 export default function Dashboard() {
   const { connected, publicKey, sendTransaction } = useWallet();
@@ -570,7 +541,7 @@ export default function Dashboard() {
                   Selecciona tu wallet y después pulsa <strong className="text-white">Conectar</strong> para continuar.
                 </p>
 
-                <WalletConnectButton />
+                <WalletMultiButton />
               </div>
             </div>
           )}
