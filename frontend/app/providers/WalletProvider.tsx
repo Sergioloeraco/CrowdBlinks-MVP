@@ -73,7 +73,7 @@ export default function WalletProvider({
     >
       <SolanaWalletProvider
         wallets={wallets}
-        autoConnect={false}
+        autoConnect={true}
         onError={(error) => {
           console.error(
             "[CrowdBlinks WalletAdapter]",
