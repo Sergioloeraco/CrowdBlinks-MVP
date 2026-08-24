@@ -228,43 +228,21 @@ export default function BuyTicketPage() {
 
   return (
     <main
+      className="min-h-[100dvh] min-h-screen p-4 sm:p-8 bg-[#08060F] text-white safe-pb"
       style={{
-        minHeight: "100vh",
-        padding: "32px 20px",
-        background: "#08060F",
-        color: "white",
         fontFamily: "var(--font-syne), sans-serif",
       }}
     >
-      <div
-        style={{
-          maxWidth: "620px",
-          margin: "0 auto",
-        }}
-      >
-        <header
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "30px",
-          }}
-        >
-          <strong style={{ fontSize: "20px" }}>
+      <div className="w-full max-w-[620px] mx-auto">
+        <header className="flex justify-between items-center mb-6 sm:mb-8">
+          <strong className="text-lg sm:text-xl font-bold">
             CrowdBlinks
           </strong>
 
           {connected ? (
             <button
               onClick={() => disconnect()}
-              style={{
-                padding: "9px 14px",
-                borderRadius: "8px",
-                border: "1px solid #9945FF",
-                background: "transparent",
-                color: "white",
-                cursor: "pointer",
-              }}
+              className="px-3.5 py-2 min-h-[44px] rounded-lg border border-[#9945FF] bg-transparent text-white text-xs sm:text-sm font-semibold cursor-pointer touch-manipulation"
             >
               Disconnect
             </button>
@@ -272,68 +250,35 @@ export default function BuyTicketPage() {
             <button
               onClick={handleWalletButtonClick}
               disabled={connecting}
-              style={{
-                padding: "9px 14px",
-                borderRadius: "8px",
-                border: "none",
-                background: "#9945FF",
-                color: "white",
-                cursor: connecting ? "not-allowed" : "pointer",
-                fontWeight: 700,
-                opacity: connecting ? 0.6 : 1,
-              }}
+              className="px-3.5 py-2 min-h-[44px] rounded-lg border-none bg-[#9945FF] text-white text-xs sm:text-sm font-bold cursor-pointer touch-manipulation"
             >
               {!wallet ? "Connect Wallet" : connecting ? "Conectando..." : `Conectar ${wallet.adapter.name}`}
             </button>
           )}
         </header>
 
-        {loading && <p>Cargando evento...</p>}
+        {loading && <p className="text-sm text-white/50">Cargando evento...</p>}
 
         {error && (
-          <div
-            style={{
-              padding: "15px",
-              marginBottom: "20px",
-              borderRadius: "10px",
-              background: "#351414",
-              color: "#ffaaaa",
-            }}
-          >
+          <div className="p-4 mb-5 rounded-xl bg-[#351414] text-[#ffaaaa] text-xs sm:text-sm leading-relaxed break-words">
             {error}
           </div>
         )}
 
         {action && (
-          <section
-            style={{
-              padding: "28px",
-              borderRadius: "18px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "#0F0B1E",
-            }}
-          >
+          <section className="p-5 sm:p-7 rounded-2xl border border-white/10 bg-[#0F0B1E]">
             <p
-              style={{
-                color: "#14F195",
-                fontSize: "12px",
-                letterSpacing: "2px",
-                fontWeight: 700,
-              }}
+              className="text-[#14F195] text-[11px] sm:text-xs tracking-widest font-bold uppercase"
             >
               CROWDBLINKS
             </p>
 
-            <h1 style={{ fontSize: "32px", margin: "15px 0 10px" }}>
+            <h1 className="text-xl sm:text-3xl font-black my-3 sm:my-4 leading-snug break-words">
               {action.title}
             </h1>
 
             <p
-              style={{
-                whiteSpace: "pre-line",
-                color: "rgba(255,255,255,0.65)",
-                lineHeight: 1.6,
-              }}
+              className="whitespace-pre-line text-white/65 text-xs sm:text-sm leading-relaxed break-words"
             >
               {action.description}
             </p>
@@ -341,19 +286,11 @@ export default function BuyTicketPage() {
             <button
               onClick={buyTicket}
               disabled={action.disabled}
-              style={{
-                width: "100%",
-                padding: "16px",
-                marginTop: "25px",
-                borderRadius: "10px",
-                border: "none",
-                background: "#14F195",
-                color: "#08060F",
-                fontWeight: 800,
-                cursor: action.disabled
-                  ? "not-allowed"
-                  : "pointer",
-              }}
+              className={`w-full py-4 min-h-[44px] mt-6 rounded-xl border-none font-black text-sm transition-all touch-manipulation ${
+                action.disabled
+                  ? "bg-white/10 text-white/40 cursor-not-allowed"
+                  : "bg-[#14F195] text-[#08060F] cursor-pointer hover:opacity-90"
+              }`}
             >
               {action.disabled
                 ? "Evento no disponible"
@@ -363,36 +300,17 @@ export default function BuyTicketPage() {
         )}
 
         {status && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "15px",
-              borderRadius: "10px",
-              background: "#10251C",
-            }}
-          >
+          <div className="mt-5 p-4 rounded-xl bg-[#10251C] text-xs sm:text-sm text-emerald-200 leading-relaxed break-words">
             {status}
           </div>
         )}
 
         {signature && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "18px",
-              borderRadius: "10px",
-              background: "#111827",
-            }}
-          >
-            <strong>Transacción confirmada</strong>
+          <div className="mt-5 p-4 sm:p-5 rounded-xl bg-[#111827] text-xs sm:text-sm border border-white/5">
+            <strong className="block font-bold">Transacción confirmada</strong>
 
             <p
-              style={{
-                marginTop: "10px",
-                wordBreak: "break-all",
-                fontSize: "12px",
-                opacity: 0.7,
-              }}
+              className="mt-2.5 break-all text-xs opacity-70 font-mono"
             >
               {signature}
             </p>
@@ -401,9 +319,7 @@ export default function BuyTicketPage() {
               href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                color: "#14F195",
-              }}
+              className="inline-block mt-3 text-xs font-semibold text-[#14F195] hover:underline break-all"
             >
               Ver en Solana Explorer
             </a>
