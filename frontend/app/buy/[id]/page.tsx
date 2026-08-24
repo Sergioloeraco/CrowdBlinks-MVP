@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
-import { Transaction } from "@solana/web3.js";
+import { VersionedTransaction } from "@solana/web3.js";
 
 type ActionResponse = {
   type: string;
@@ -25,7 +25,7 @@ export default function BuyTicketPage() {
     connecting,
     wallet,
     connect,
-    sendTransaction,
+    signTransaction,
     disconnect,
   } = useWallet();
 
@@ -101,8 +101,8 @@ export default function BuyTicketPage() {
       return;
     }
 
-    if (!sendTransaction) {
-      setError("La wallet no permite enviar transacciones.");
+    if (!signTransaction) {
+      setError("La wallet no permite firmar transacciones.");
       return;
     }
 
@@ -144,40 +144,57 @@ export default function BuyTicketPage() {
         (char) => char.charCodeAt(0)
       );
 
-      const transaction = Transaction.from(raw);
+      const transaction =
+        VersionedTransaction.deserialize(raw);
 
-      if (
-        !transaction.feePayer ||
-        !transaction.feePayer.equals(publicKey)
-      ) {
+      const payerKey =
+        transaction.message.staticAccountKeys[0];
+
+      if (!payerKey || !payerKey.equals(publicKey)) {
         throw new Error(
           "La transacción no pertenece a la wallet conectada."
         );
       }
 
-      setStatus("Esperando confirmación en Phantom...");
+      setStatus("Esperando firma en Phantom...");
 
-      const txSignature = await sendTransaction(
-        transaction,
-        connection,
-        {
-          skipPreflight: false,
-          preflightCommitment: "confirmed",
-        }
+      console.log(
+        "[CrowdBlinks BUY] solicitando firma de VersionedTransaction"
+      );
+
+      const signedTransaction =
+        await signTransaction(transaction);
+
+      console.log(
+        "[CrowdBlinks BUY] transacción firmada correctamente"
+      );
+
+      setStatus("Enviando transacción firmada a Solana...");
+
+      const txSignature =
+        await connection.sendRawTransaction(
+          signedTransaction.serialize(),
+          {
+            skipPreflight: false,
+            preflightCommitment: "confirmed",
+          }
+        );
+
+      console.log(
+        "[CrowdBlinks BUY] transacción enviada:",
+        txSignature
       );
 
       setStatus("Confirmando transacción en Solana...");
 
-      if (
-        transaction.recentBlockhash &&
-        transaction.lastValidBlockHeight !== undefined
-      ) {
+      if (data.lastValidBlockHeight !== undefined) {
         await connection.confirmTransaction(
           {
             signature: txSignature,
-            blockhash: transaction.recentBlockhash,
+            blockhash:
+              transaction.message.recentBlockhash,
             lastValidBlockHeight:
-              transaction.lastValidBlockHeight,
+              data.lastValidBlockHeight,
           },
           "confirmed"
         );

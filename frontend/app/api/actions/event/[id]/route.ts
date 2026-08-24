@@ -4,7 +4,8 @@ import {
   LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
-  Transaction,
+  TransactionMessage,
+  VersionedTransaction,
 } from "@solana/web3.js";
 import {
   findEventPda,
@@ -213,18 +214,17 @@ export async function POST(
     } =
       await connection.getLatestBlockhash("confirmed");
 
-    const transaction = new Transaction({
-      feePayer: supporterPubkey,
-      blockhash,
-      lastValidBlockHeight,
-    }).add(instruction);
+    const messageV0 = new TransactionMessage({
+      payerKey: supporterPubkey,
+      recentBlockhash: blockhash,
+      instructions: [instruction],
+    }).compileToV0Message();
 
-    const serializedTx = transaction
-      .serialize({
-        requireAllSignatures: false,
-        verifySignatures: false,
-      })
-      .toString("base64");
+    const transaction = new VersionedTransaction(messageV0);
+
+    const serializedTx = Buffer.from(
+      transaction.serialize()
+    ).toString("base64");
 
     const baseUrl = getBaseUrl(req);
 
@@ -235,6 +235,7 @@ export async function POST(
     return NextResponse.json(
       {
         transaction: serializedTx,
+        lastValidBlockHeight,
         message: successMessage,
         links: {
           next: {
