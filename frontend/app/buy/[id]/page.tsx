@@ -12,6 +12,7 @@ type ActionResponse = {
   description: string;
   label: string;
   disabled?: boolean;
+  icon?: string;
 };
 
 export default function BuyTicketPage() {
@@ -29,18 +30,6 @@ export default function BuyTicketPage() {
     disconnect,
   } = useWallet();
 
-  function handleWalletButtonClick() {
-    if (!wallet) {
-      setVisible(true);
-      return;
-    }
-    if (!connected && !connecting) {
-      connect().catch((err) => {
-        console.error("[CrowdBlinks] connect error:", err);
-      });
-    }
-  }
-
   const [mounted, setMounted] = useState(false);
   const [action, setAction] = useState<ActionResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +42,19 @@ export default function BuyTicketPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  function handleWalletButtonClick() {
+    if (!wallet) {
+      setVisible(true);
+      return;
+    }
+
+    if (!connected && !connecting) {
+      connect().catch((err) => {
+        console.error("[CrowdBlinks] connect error:", err);
+      });
+    }
+  }
 
   async function loadAction() {
     try {
@@ -158,18 +160,10 @@ export default function BuyTicketPage() {
 
       setStatus("Esperando firma en Phantom...");
 
-      console.log(
-        "[CrowdBlinks BUY] solicitando firma de VersionedTransaction"
-      );
-
       const signedTransaction =
         await signTransaction(transaction);
 
-      console.log(
-        "[CrowdBlinks BUY] transacción firmada correctamente"
-      );
-
-      setStatus("Enviando transacción firmada a Solana...");
+      setStatus("Enviando transacción a Solana...");
 
       const txSignature =
         await connection.sendRawTransaction(
@@ -179,11 +173,6 @@ export default function BuyTicketPage() {
             preflightCommitment: "confirmed",
           }
         );
-
-      console.log(
-        "[CrowdBlinks BUY] transacción enviada:",
-        txSignature
-      );
 
       setStatus("Confirmando transacción en Solana...");
 
@@ -222,9 +211,68 @@ export default function BuyTicketPage() {
     }
   }
 
+  function getProgress() {
+    if (!action) return 0;
+
+    const match =
+      action.description.match(
+        /Boletos:\s*(\d+)\s*\/\s*(\d+)/
+      );
+
+    if (!match) return 0;
+
+    const sold = Number(match[1]);
+    const total = Number(match[2]);
+
+    if (!total) return 0;
+
+    return Math.min(
+      100,
+      Math.round((sold / total) * 100)
+    );
+  }
+
+  function getTickets() {
+    if (!action) {
+      return {
+        sold: 0,
+        total: 0,
+        available: 0,
+      };
+    }
+
+    const match =
+      action.description.match(
+        /Boletos:\s*(\d+)\s*\/\s*(\d+)/
+      );
+
+    if (!match) {
+      return {
+        sold: 0,
+        total: 0,
+        available: 0,
+      };
+    }
+
+    const sold = Number(match[1]);
+    const total = Number(match[2]);
+
+    return {
+      sold,
+      total,
+      available: Math.max(total - sold, 0),
+    };
+  }
+
   if (!mounted) {
     return null;
   }
+
+  const progress = getProgress();
+  const tickets = getTickets();
+  const soldOut =
+    tickets.total > 0 &&
+    tickets.available === 0;
 
   return (
     <main
@@ -245,29 +293,32 @@ export default function BuyTicketPage() {
       <header
         style={{
           background: "#0B0816",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom:
+            "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 max-w-[720px] mx-auto">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 max-w-[720px] mx-auto">
+          <div className="flex items-center gap-2 min-w-0">
             <div
               className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-black text-sm"
               style={{
-                background: "linear-gradient(135deg,#9945FF,#14F195)",
+                background:
+                  "linear-gradient(135deg,#9945FF,#14F195)",
               }}
             >
               C
             </div>
-            <span className="font-black text-base tracking-tight truncate">
+
+            <span className="font-black text-base truncate">
               CrowdBlinks
             </span>
+
             <span
-              className="shrink-0"
+              className="text-[#14F195] shrink-0"
               style={{
                 fontFamily: "'DM Mono',monospace",
                 fontSize: 9,
                 letterSpacing: 3,
-                color: "#14F195",
               }}
             >
               DEVNET
@@ -277,7 +328,7 @@ export default function BuyTicketPage() {
           {connected ? (
             <button
               onClick={() => disconnect()}
-              className="px-3.5 py-2 min-h-[44px] rounded-lg border border-[#9945FF] bg-transparent text-white text-xs sm:text-sm font-semibold cursor-pointer touch-manipulation"
+              className="px-3 py-2 min-h-[44px] rounded-lg border border-[#9945FF] text-xs font-semibold"
             >
               Disconnect
             </button>
@@ -285,7 +336,7 @@ export default function BuyTicketPage() {
             <button
               onClick={handleWalletButtonClick}
               disabled={connecting}
-              className="px-3.5 py-2 min-h-[44px] rounded-lg border-none bg-[#9945FF] text-white text-xs sm:text-sm font-bold cursor-pointer touch-manipulation"
+              className="px-3 py-2 min-h-[44px] rounded-lg bg-[#9945FF] text-xs font-bold"
             >
               {!wallet
                 ? "Connect Wallet"
@@ -297,94 +348,178 @@ export default function BuyTicketPage() {
         </div>
       </header>
 
-      <div className="relative w-full max-w-[720px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <div className="relative max-w-[720px] mx-auto px-4 sm:px-6 py-6 sm:py-10">
         {loading && (
-          <p className="text-sm text-white/50 text-center">
-            Cargando evento...
-          </p>
+          <div className="max-w-[620px] mx-auto py-12 text-center">
+            <p className="text-sm text-white/40">
+              Cargando evento...
+            </p>
+          </div>
         )}
 
         {error && (
-          <div className="max-w-[620px] mx-auto p-4 mb-5 rounded-xl bg-red-500/10 border border-red-400/20 text-red-200 text-xs sm:text-sm leading-relaxed break-words">
+          <div className="max-w-[620px] mx-auto mb-5 p-4 rounded-xl bg-red-500/10 border border-red-400/20 text-red-200 text-xs sm:text-sm">
             {error}
           </div>
         )}
 
-        {action && (
-          <section className="w-full max-w-[620px] mx-auto rounded-lg overflow-hidden border border-white/10">
-            <div
-              className="p-5 sm:p-6 flex flex-col justify-between min-h-44 sm:min-h-48"
-              style={{
-                background: "linear-gradient(135deg,#0F0B1E,#102018)",
-              }}
-            >
-              <span
-                className="text-[#14F195] text-[11px] sm:text-xs tracking-widest font-bold uppercase"
+        {action && !loading && (
+          <section className="max-w-[620px] mx-auto overflow-hidden rounded-2xl border border-white/10 bg-[#0B0816] shadow-2xl">
+            {action.icon ? (
+              <div className="relative h-48 sm:h-60 overflow-hidden bg-[#0F0B1E]">
+                <img
+                  src={action.icon}
+                  alt={action.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0816] via-transparent to-transparent" />
+              </div>
+            ) : (
+              <div
+                className="h-48 sm:h-60 p-6 flex flex-col justify-between"
                 style={{
-                  fontFamily: "'DM Mono',monospace",
+                  background:
+                    "linear-gradient(135deg,#0F0B1E,#102018)",
                 }}
               >
-                CROWDBLINKS
+                <span className="text-[#14F195] text-xs tracking-[3px] font-bold">
+                  CROWDBLINKS
+                </span>
+              </div>
+            )}
+
+            <div className="p-5 sm:p-7">
+              <span className="text-[#14F195] text-[10px] tracking-[3px] font-bold">
+                BOLETO ON-CHAIN
               </span>
+
+              <h1 className="mt-3 text-2xl sm:text-3xl font-black leading-tight break-words">
+                {action.title.replace(
+                  "CrowdBlinks: ",
+                  ""
+                )}
+              </h1>
+
+              <p className="mt-3 text-sm text-white/45 leading-relaxed">
+                {action.description
+                  .replace(/Precio:[^\n]+\n?/g, "")
+                  .replace(/Boletos:[^\n]+/g, "")
+                  .trim() ||
+                  "Compra tu boleto directamente desde Solana."}
+              </p>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] text-white/35 tracking-[2px] uppercase">
+                    Disponibles
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black">
+                    {tickets.available}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-[10px] text-white/35 tracking-[2px] uppercase">
+                    Vendidos
+                  </p>
+
+                  <p className="mt-2 text-2xl font-black">
+                    {tickets.sold}
+                    <span className="text-white/25 text-base">
+                      {" "}
+                      / {tickets.total}
+                    </span>
+                  </p>
+                </div>
+              </div>
 
               <div className="mt-6">
-                <h1 className="font-black text-xl sm:text-2xl leading-tight break-words">
-                  {action.title}
-                </h1>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-white/35 tracking-[2px] uppercase">
+                    Progreso
+                  </span>
 
-                <p className="text-xs text-white/40 mt-2 break-words">
-                  {action.description || "Boleto on-chain para este evento."}
-                </p>
+                  <span className="text-xs font-mono text-[#14F195]">
+                    {progress}%
+                  </span>
+                </div>
+
+                <div className="h-3 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${progress}%`,
+                      background:
+                        "linear-gradient(90deg,#9945FF,#14F195)",
+                    }}
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 bg-[#0F0B1E] border-t border-white/5">
-              <span className="font-bold text-sm">
-                {action.disabled
-                  ? "Evento no disponible"
-                  : "Comprar boleto"}
-              </span>
+              <div className="mt-6 flex items-center justify-between">
+                <span className="text-xs text-white/40">
+                  Precio del boleto
+                </span>
+
+                <span className="font-mono font-bold text-[#14F195]">
+                  {action.description.match(
+                    /Precio:\s*([0-9.]+)\s*SOL/
+                  )?.[1] ?? "—"}{" "}
+                  SOL
+                </span>
+              </div>
 
               <button
                 onClick={buyTicket}
-                disabled={action.disabled}
-                className={`w-full sm:w-auto sm:min-w-[210px] py-3 px-5 min-h-[44px] rounded-lg border-none font-black text-sm transition-all touch-manipulation ${
-                  action.disabled
-                    ? "bg-white/10 text-white/40 cursor-not-allowed"
-                    : "bg-[#14F195] text-[#08060F] cursor-pointer hover:opacity-90"
-                }`}
+                disabled={action.disabled || soldOut}
+                className="mt-6 w-full min-h-[52px] rounded-xl font-black text-sm transition-all"
+                style={{
+                  background:
+                    action.disabled || soldOut
+                      ? "rgba(255,255,255,0.08)"
+                      : "#14F195",
+                  color:
+                    action.disabled || soldOut
+                      ? "rgba(255,255,255,0.35)"
+                      : "#08060F",
+                }}
               >
-                {action.disabled
-                  ? "Evento no disponible"
-                  : action.label}
+                {soldOut
+                  ? "SOLD OUT"
+                  : action.disabled
+                    ? "Evento no disponible"
+                    : action.label}
               </button>
+
+              {status && (
+                <div className="mt-4 rounded-xl border border-[#14F195]/20 bg-[#14F195]/5 p-4 text-xs text-emerald-200">
+                  {status}
+                </div>
+              )}
+
+              {signature && (
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <p className="text-xs font-bold">
+                    ✓ Transacción confirmada
+                  </p>
+
+                  <a
+                    href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-3 text-xs text-[#14F195]"
+                  >
+                    Ver en Solana Explorer ↗
+                  </a>
+                </div>
+              )}
             </div>
           </section>
-        )}
-
-        {status && (
-          <div className="w-full max-w-[620px] mx-auto mt-5 p-4 rounded-xl bg-[#10251C] border border-[#14F195]/10 text-xs sm:text-sm text-emerald-200 leading-relaxed break-words">
-            {status}
-          </div>
-        )}
-
-        {signature && (
-          <div className="w-full max-w-[620px] mx-auto mt-5 p-4 sm:p-5 rounded-xl bg-[#111827] text-xs sm:text-sm border border-white/5">
-            <strong className="block font-bold">Transacción confirmada</strong>
-
-            <p className="mt-2.5 break-all text-xs opacity-70 font-mono">
-              {signature}
-            </p>
-
-            <a
-              href={`https://explorer.solana.com/tx/${signature}?cluster=devnet`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mt-3 text-xs font-semibold text-[#14F195] hover:underline break-all"
-            >
-              Ver en Solana Explorer
-            </a>
-          </div>
         )}
       </div>
     </main>
