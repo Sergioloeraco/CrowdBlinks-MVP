@@ -19,54 +19,6 @@ import {
 } from "../lib/program";
 import { getEvents, EventMetadata } from "../lib/events";
 
-/*
- * ============================================================
- * WALLET CONNECT BUTTON
- * ============================================================
- *
- * En lugar de WalletMultiButton, abrimos directamente el
- * WalletModal mediante useWalletModal().
- *
- * Esto permite comprobar si el problema móvil estaba en
- * WalletMultiButton o en el modal de Wallet Adapter.
- */
-
-const WalletConnectButton = dynamic(
-  async () => {
-    const { useWalletModal } =
-      await import("@solana/wallet-adapter-react-ui");
-
-    return function WalletConnectButtonComponent() {
-      const { setVisible } = useWalletModal();
-
-      return (
-        <button
-          type="button"
-          onClick={() => {
-            console.log(
-              "[CrowdBlinks] Select Wallet presionado"
-            );
-
-            setVisible(true);
-          }}
-          className="rounded-xl px-6 py-3 font-semibold touch-manipulation"
-          style={{
-            background:
-              "linear-gradient(135deg,#9945FF,#14F195)",
-            color: "#fff",
-            minHeight: "44px",
-          }}
-        >
-          Select Wallet
-        </button>
-      );
-    };
-  },
-  {
-    ssr: false,
-  }
-);
-
 type TxStatus =
   | "idle"
   | "building"
@@ -81,6 +33,36 @@ type EventRow = ParsedEventState & {
   imageUrl: string | null;
 };
 
+const WalletConnectButton = dynamic(
+  async () => {
+    const { useWalletModal } =
+      await import("@solana/wallet-adapter-react-ui");
+
+    return function WalletConnectButtonComponent() {
+      const { setVisible } = useWalletModal();
+
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            console.log("[CrowdBlinks] Select Wallet presionado");
+            setVisible(true);
+          }}
+          className="rounded-xl px-6 py-3 font-semibold touch-manipulation"
+          style={{
+            background: "linear-gradient(135deg,#9945FF,#14F195)",
+            color: "#fff",
+            minHeight: "44px",
+          }}
+        >
+          Select Wallet
+        </button>
+      );
+    };
+  },
+  { ssr: false }
+);
+
 export default function Dashboard() {
   const { connected, publicKey, sendTransaction } = useWallet();
   const wallet = useAnchorWallet();
@@ -90,12 +72,10 @@ export default function Dashboard() {
   const [title, setTitle] = useState("");
   const [ticketPrice, setTicketPrice] = useState("0.1");
   const [maxTickets, setMaxTickets] = useState("100");
-
   const [status, setStatus] = useState<TxStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [txSig, setTxSig] = useState("");
   const [blinkUrl, setBlinkUrl] = useState("");
-
   const [events, setEvents] = useState<EventRow[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -104,12 +84,6 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  /*
-   * ============================================================
-   * ANCHOR PROVIDER
-   * ============================================================
-   */
 
   const program = useMemo(() => {
     if (!wallet) return null;
@@ -125,12 +99,6 @@ export default function Dashboard() {
       provider
     );
   }, [connection, wallet]);
-
-  /*
-   * ============================================================
-   * CARGAR EVENTOS
-   * ============================================================
-   */
 
   const fetchEvents = useCallback(async () => {
     if (!program || !publicKey) return;
@@ -174,12 +142,6 @@ export default function Dashboard() {
     }
   }, [program, publicKey]);
 
-  /*
-   * ============================================================
-   * ACTUALIZAR EVENTOS
-   * ============================================================
-   */
-
   async function handleRefreshEvents() {
     setLoadingEvents(true);
 
@@ -190,12 +152,6 @@ export default function Dashboard() {
     }
   }
 
-  /*
-   * ============================================================
-   * CARGAR EVENTOS AL CONECTAR
-   * ============================================================
-   */
-
   useEffect(() => {
     if (connected && program) {
       void fetchEvents();
@@ -203,12 +159,6 @@ export default function Dashboard() {
       setEvents([]);
     }
   }, [connected, fetchEvents, program]);
-
-  /*
-   * ============================================================
-   * ACTUALIZACIÓN AUTOMÁTICA
-   * ============================================================
-   */
 
   useEffect(() => {
     if (!connected || !program) return;
@@ -221,12 +171,6 @@ export default function Dashboard() {
       window.clearInterval(interval);
     };
   }, [connected, fetchEvents, program]);
-
-  /*
-   * ============================================================
-   * CREAR EVENTO
-   * ============================================================
-   */
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -246,70 +190,38 @@ export default function Dashboard() {
     setBlinkUrl("");
 
     try {
-      /*
-       * Sanitizar ID
-       */
       const cleanEventId = eventId
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9-]/g, "-");
 
       const cleanTitle = title.trim() || cleanEventId;
-
       const priceSol = parseFloat(ticketPrice);
       const capacity = parseInt(maxTickets, 10);
 
-      /*
-       * Validaciones
-       */
       if (!cleanEventId || cleanEventId.length > 32) {
-        throw new Error(
-          "El ID debe tener entre 1 y 32 caracteres."
-        );
+        throw new Error("El ID debe tener entre 1 y 32 caracteres.");
       }
 
       if (isNaN(priceSol) || priceSol <= 0) {
-        throw new Error(
-          "El precio del boleto debe ser mayor a 0 SOL."
-        );
+        throw new Error("El precio del boleto debe ser mayor a 0 SOL.");
       }
 
       if (isNaN(capacity) || capacity < 1 || capacity > 65535) {
-        throw new Error(
-          "La capacidad debe estar entre 1 y 65535 boletos."
-        );
+        throw new Error("La capacidad debe estar entre 1 y 65535 boletos.");
       }
 
-      /*
-       * PDA
-       */
-      const [pda] = findEventPda(
-        publicKey,
-        cleanEventId
-      );
-
-      /*
-       * Evitar duplicados
-       */
+      const [pda] = findEventPda(publicKey, cleanEventId);
       const existing = await connection.getAccountInfo(pda);
 
       if (existing) {
-        throw new Error(
-          `Ya existe un evento con el ID "${cleanEventId}".`
-        );
+        throw new Error(`Ya existe un evento con el ID \"${cleanEventId}\".`);
       }
 
-      /*
-       * Construir transacción Anchor
-       */
       const transaction = await program.methods
         .initializeCampaign(
           cleanEventId,
-          new BN(
-            Math.round(
-              priceSol * LAMPORTS_PER_SOL
-            )
-          ),
+          new BN(Math.round(priceSol * LAMPORTS_PER_SOL)),
           capacity
         )
         .accounts({
@@ -319,53 +231,25 @@ export default function Dashboard() {
         })
         .transaction();
 
-      /*
-       * Blockhash + slot
-       */
       const {
         context: { slot },
-        value: {
-          blockhash,
-          lastValidBlockHeight,
-        },
-      } = await connection.getLatestBlockhashAndContext(
-        "confirmed"
-      );
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext("confirmed");
 
-      /*
-       * Preparar transacción
-       */
       transaction.recentBlockhash = blockhash;
-      transaction.lastValidBlockHeight =
-        lastValidBlockHeight;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = publicKey;
 
-      /*
-       * Abrir flujo de firma
-       */
       setStatus("confirming");
 
-      /*
-       * Enviar a Phantom / MWA
-       */
-      const sig = await sendTransaction(
-        transaction,
-        connection,
-        {
-          skipPreflight: false,
-          preflightCommitment: "confirmed",
-          minContextSlot: slot,
-        }
-      );
+      const sig = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        minContextSlot: slot,
+      });
 
-      console.log(
-        "[CrowdBlinks] Transaction sent:",
-        sig
-      );
+      console.log("[CrowdBlinks] Transaction sent:", sig);
 
-      /*
-       * Confirmar
-       */
       await connection.confirmTransaction(
         {
           signature: sig,
@@ -375,138 +259,68 @@ export default function Dashboard() {
         "confirmed"
       );
 
-      console.log(
-        "[CrowdBlinks] Transaction confirmed:",
-        sig
-      );
+      console.log("[CrowdBlinks] Transaction confirmed:", sig);
 
-      /*
-       * Guardar metadata
-       */
-      const saveEventResponse = await fetch(
-        "/api/events",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            campaignPda: pda.toBase58(),
-            authority: publicKey.toBase58(),
-            eventId: cleanEventId,
-            title: cleanTitle,
-            description: "",
-            imageUrl: null,
-            ticketPriceLamports:
-              Math.round(
-                priceSol * LAMPORTS_PER_SOL
-              ),
-            maxTickets: capacity,
-          }),
-        }
-      );
+      const saveEventResponse = await fetch("/api/events", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          campaignPda: pda.toBase58(),
+          authority: publicKey.toBase58(),
+          eventId: cleanEventId,
+          title: cleanTitle,
+          description: "",
+          imageUrl: null,
+          ticketPriceLamports: Math.round(priceSol * LAMPORTS_PER_SOL),
+          maxTickets: capacity,
+        }),
+      });
 
       if (!saveEventResponse.ok) {
-        const saveEventError =
-          await saveEventResponse
-            .json()
-            .catch(() => null);
-
+        const saveEventError = await saveEventResponse.json().catch(() => null);
         console.error(
           "[CrowdBlinks] Event saved on-chain but Supabase sync failed:",
           saveEventError
         );
       }
 
-      /*
-       * Crear Blink
-       */
-      const eventActionId =
-        `${publicKey.toBase58()}_${cleanEventId}`;
-
+      const eventActionId = `${publicKey.toBase58()}_${cleanEventId}`;
       const origin =
         process.env.NEXT_PUBLIC_APP_URL ||
-        (typeof window !== "undefined"
-          ? window.location.origin
-          : "");
-
-      const blink =
-        `${origin}/buy/${encodeURIComponent(
-          eventActionId
-        )}`;
-
-      /*
-       * Tweet
-       */
+        (typeof window !== "undefined" ? window.location.origin : "");
+      const blink = `${origin}/buy/${encodeURIComponent(eventActionId)}`;
       const tweetText =
         `${cleanTitle}\n\n` +
         `Compra tu boleto por ${priceSol} SOL con Solana Blinks.\n\n` +
-        `${blink}\n\n` +
-        `#Solana #Web3 #CrowdBlinks`;
+        `${blink}\n\n#Solana #Web3 #CrowdBlinks`;
 
-      /*
-       * Éxito
-       */
       setTxSig(sig);
       setBlinkUrl(blink);
       setStatus("success");
 
-      /*
-       * Copiar Blink
-       */
-      await navigator.clipboard
-        ?.writeText(blink)
-        .catch(() => undefined);
+      await navigator.clipboard?.writeText(blink).catch(() => undefined);
 
-      /*
-       * Abrir X
-       */
       window.open(
-        `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          tweetText
-        )}`,
+        `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`,
         "_blank",
         "noopener,noreferrer"
       );
 
-      /*
-       * Actualizar
-       */
       await fetchEvents();
     } catch (err) {
-      console.error(
-        "[CrowdBlinks] handleCreate:",
-        err
-      );
-
-      const parsedError =
-        parseCrowdBlinksError(err);
-
-      setErrorMsg(
-        parsedError ||
-          "No se pudo crear el evento."
-      );
-
+      console.error("[CrowdBlinks] handleCreate:", err);
+      const parsedError = parseCrowdBlinksError(err);
+      setErrorMsg(parsedError || "No se pudo crear el evento.");
       setStatus("error");
     }
   }
 
-  /*
-   * ============================================================
-   * CERRAR EVENTO
-   * ============================================================
-   */
-
-  async function handleClose(
-    closeEventId: string
-  ) {
+  async function handleClose(closeEventId: string) {
     if (!program || !publicKey) return;
 
-    if (
-      !window.confirm(
-        "Cerrar este evento recuperara el rent de la cuenta."
-      )
-    ) {
+    if (!window.confirm("Cerrar este evento recuperara el rent de la cuenta.")) {
       return;
     }
 
@@ -514,53 +328,31 @@ export default function Dashboard() {
     setErrorMsg("");
 
     try {
-      const [pda] = findEventPda(
-        publicKey,
-        closeEventId
-      );
+      const [pda] = findEventPda(publicKey, closeEventId);
+      const transaction = await program.methods
+        .closeCampaign()
+        .accounts({
+          campaign: pda,
+          authority: publicKey,
+        })
+        .transaction();
 
-      const transaction =
-        await program.methods
-          .closeCampaign()
-          .accounts({
-            campaign: pda,
-            authority: publicKey,
-          })
-          .transaction();
-
-      /*
-       * Blockhash + slot
-       */
       const {
         context: { slot },
-        value: {
-          blockhash,
-          lastValidBlockHeight,
-        },
-      } = await connection.getLatestBlockhashAndContext(
-        "confirmed"
-      );
+        value: { blockhash, lastValidBlockHeight },
+      } = await connection.getLatestBlockhashAndContext("confirmed");
 
       transaction.recentBlockhash = blockhash;
-      transaction.lastValidBlockHeight =
-        lastValidBlockHeight;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = publicKey;
 
-      const signature =
-        await sendTransaction(
-          transaction,
-          connection,
-          {
-            skipPreflight: false,
-            preflightCommitment: "confirmed",
-            minContextSlot: slot,
-          }
-        );
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+        minContextSlot: slot,
+      });
 
-      console.log(
-        "[CrowdBlinks] Close transaction sent:",
-        signature
-      );
+      console.log("[CrowdBlinks] Close transaction sent:", signature);
 
       await connection.confirmTransaction(
         {
@@ -571,103 +363,54 @@ export default function Dashboard() {
         "confirmed"
       );
 
-      console.log(
-        "[CrowdBlinks] Close transaction confirmed:",
-        signature
-      );
-
+      console.log("[CrowdBlinks] Close transaction confirmed:", signature);
       await fetchEvents();
     } catch (err) {
-      console.error(
-        "[CrowdBlinks] handleClose:",
-        err
-      );
-
-      alert(
-        parseCrowdBlinksError(err) ||
-          "No se pudo cerrar el evento."
-      );
+      console.error("[CrowdBlinks] handleClose:", err);
+      alert(parseCrowdBlinksError(err) || "No se pudo cerrar el evento.");
     } finally {
       setLoadingEvents(false);
     }
   }
-
-  /*
-   * ============================================================
-   * RESET
-   * ============================================================
-   */
 
   function resetForm() {
     setEventId("");
     setTitle("");
     setTicketPrice("0.1");
     setMaxTickets("100");
-
     setErrorMsg("");
     setStatus("idle");
-
     setTxSig("");
     setBlinkUrl("");
     setCopied(false);
   }
 
-  /*
-   * ============================================================
-   * COPIAR BLINK
-   * ============================================================
-   */
-
   async function copyBlink() {
     if (!blinkUrl) return;
 
     try {
-      await navigator.clipboard.writeText(
-        blinkUrl
-      );
-
+      await navigator.clipboard.writeText(blinkUrl);
       setCopied(true);
-
       window.setTimeout(() => {
         setCopied(false);
       }, 1500);
     } catch (err) {
-      console.error(
-        "[CrowdBlinks] copyBlink:",
-        err
-      );
+      console.error("[CrowdBlinks] copyBlink:", err);
     }
   }
 
-  /*
-   * ============================================================
-   * HYDRATION
-   * ============================================================
-   */
-
   if (!mounted) return null;
 
-  const previewTitle =
-    title || "Nombre del evento";
-
-  const previewCapacity =
-    maxTickets || "0";
-
-  const previewPrice =
-    ticketPrice || "0";
-
-  const isSubmitting =
-    status === "building" ||
-    status === "confirming";
+  const previewTitle = title || "Nombre del evento";
+  const previewCapacity = maxTickets || "0";
+  const previewPrice = ticketPrice || "0";
+  const isSubmitting = status === "building" || status === "confirming";
 
   return (
     <div
       className="min-h-screen bg-[#08060F] text-white"
-      style={{
-        fontFamily: "'Syne', sans-serif",
-      }}
+      style={{ fontFamily: "'Syne', sans-serif" }}
     >
-      {/* Background grid */}
       <div
         className="fixed inset-0 pointer-events-none opacity-[0.04]"
         style={{
@@ -677,12 +420,10 @@ export default function Dashboard() {
         }}
       />
 
-      {/* Header */}
       <header
         style={{
           background: "#0B0816",
-          borderBottom:
-            "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -690,22 +431,18 @@ export default function Dashboard() {
             <div
               className="w-7 h-7 shrink-0 rounded-lg flex items-center justify-center font-black text-sm"
               style={{
-                background:
-                  "linear-gradient(135deg,#9945FF,#14F195)",
+                background: "linear-gradient(135deg,#9945FF,#14F195)",
               }}
             >
               C
             </div>
-
             <span className="font-black text-base tracking-tight truncate">
               CrowdBlinks
             </span>
-
             <span
               className="shrink-0"
               style={{
-                fontFamily:
-                  "'DM Mono',monospace",
+                fontFamily: "'DM Mono',monospace",
                 fontSize: 9,
                 letterSpacing: 3,
                 color: "#14F195",
@@ -714,39 +451,23 @@ export default function Dashboard() {
               DEVNET
             </span>
           </div>
-
-          <div className="shrink-0">
-            <WalletMultiButton />
-          </div>
         </div>
       </header>
 
-      {/* Main */}
-      <main className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100vh-57px)] pb-10 lg:pb-0">
-        {/* Organizer */}
-        <section className="flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/5">
+      <main className="grid grid-cols-1 lg:grid-cols-2 min-h-[calc(100dvh-57px)] min-h-[calc(100vh-57px)]">
+        <section className="flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/5 safe-pb">
           <div>
-            <p style={monoLabel}>
-              ORGANIZADOR
-            </p>
-
+            <p style={monoLabel}>ORGANIZADOR</p>
             <h1 className="font-black text-xl sm:text-2xl leading-tight tracking-tight mb-1">
               Crea eventos con boletos on-chain
             </h1>
-
             <p className="text-xs leading-relaxed text-white/40">
-              Tu audiencia compra directo desde X.
-              Cada compra reparte 99% al organizador
-              y 1% a tesoreria.
+              Tu audiencia compra directo desde X. Cada compra reparte 99% al organizador y 1% a tesoreria.
             </p>
           </div>
 
           {connected ? (
-            <form
-              onSubmit={handleCreate}
-              className="flex flex-col gap-4 flex-1"
-            >
-              {/* Event ID */}
+            <form onSubmit={handleCreate} className="flex flex-col gap-4 flex-1">
               <Field label="ID del evento">
                 <input
                   value={eventId}
@@ -754,10 +475,7 @@ export default function Dashboard() {
                     setEventId(
                       e.target.value
                         .toLowerCase()
-                        .replace(
-                          /[^a-z0-9-]/g,
-                          "-"
-                        )
+                        .replace(/[^a-z0-9-]/g, "-")
                     )
                   }
                   required
@@ -767,28 +485,20 @@ export default function Dashboard() {
                 />
               </Field>
 
-              {/* Title */}
               <Field label="Nombre visible">
                 <input
                   value={title}
-                  onChange={(e) =>
-                    setTitle(e.target.value)
-                  }
+                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="Hackathon Meetup Guadalajara"
                   className={inputCls}
                 />
               </Field>
 
-              {/* Price + Capacity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="Precio boleto">
                   <input
                     value={ticketPrice}
-                    onChange={(e) =>
-                      setTicketPrice(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setTicketPrice(e.target.value)}
                     required
                     type="number"
                     min="0.001"
@@ -801,11 +511,7 @@ export default function Dashboard() {
                 <Field label="Capacidad">
                   <input
                     value={maxTickets}
-                    onChange={(e) =>
-                      setMaxTickets(
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => setMaxTickets(e.target.value)}
                     required
                     type="number"
                     min="1"
@@ -817,60 +523,59 @@ export default function Dashboard() {
                 </Field>
               </div>
 
-              {/* Error */}
-              {status === "error" &&
-                errorMsg && (
-                  <div className="p-3 rounded-lg text-xs leading-relaxed text-red-200 bg-red-500/10 border border-red-400/20">
-                    {errorMsg}
-                  </div>
-                )}
+              {status === "error" && errorMsg && (
+                <div className="p-3 rounded-lg text-xs leading-relaxed text-red-200 bg-red-500/10 border border-red-400/20 break-words">
+                  {errorMsg}
+                </div>
+              )}
 
-              {/* Create */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 sm:mt-auto w-full py-4 px-4 rounded-lg font-black text-sm transition-all min-h-[50px] touch-manipulation disabled:cursor-not-allowed"
-                style={{
-                  background: isSubmitting
-                    ? "rgba(153,69,255,0.3)"
-                    : "linear-gradient(135deg,#9945FF,#1FAE78)",
-                  opacity: isSubmitting
-                    ? 0.65
-                    : 1,
-                }}
-              >
-                {status === "building"
-                  ? "Preparando transaccion..."
-                  : status === "confirming"
-                    ? "Confirma la transaccion en Phantom..."
-                    : "Crear Blink de boletos"}
-              </button>
+              {connected && (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="mt-auto w-full py-4 min-h-[44px] rounded-lg font-black text-sm transition-all touch-manipulation"
+                  style={{
+                    background: isSubmitting
+                      ? "rgba(153,69,255,0.3)"
+                      : "linear-gradient(135deg,#9945FF,#1FAE78)",
+                    opacity: isSubmitting ? 0.65 : 1,
+                  }}
+                >
+                  {status === "building"
+                    ? "Preparando transaccion..."
+                    : status === "confirming"
+                      ? "Confirmando en Solana..."
+                      : "Crear Blink de boletos"}
+                </button>
+              )}
             </form>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center py-10 min-h-[300px]">
+            <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center py-8">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
                 style={{
-                  background:
-                    "rgba(153,69,255,0.1)",
-                  border:
-                    "1px solid rgba(153,69,255,0.2)",
+                  background: "rgba(153,69,255,0.1)",
+                  border: "1px solid rgba(153,69,255,0.2)",
                 }}
               >
                 CB
               </div>
 
               <p className="text-sm w-full sm:max-w-xs leading-relaxed text-white/40">
-                Conecta tu wallet para crear
-                eventos y publicar Blinks.
+                Conecta tu wallet para crear eventos y publicar Blinks.
               </p>
 
-              <WalletMultiButton />
+              <div className="flex flex-col items-center gap-3 text-center">
+                <p className="text-xs sm:text-sm text-white/60">
+                  Selecciona tu wallet y después pulsa <strong className="text-white">Conectar</strong> para continuar.
+                </p>
+
+                <WalletConnectButton />
+              </div>
             </div>
           )}
         </section>
 
-        {/* Preview */}
         <section
           className="flex flex-col gap-5 p-4 sm:p-6 overflow-y-auto"
           style={{
@@ -878,142 +583,64 @@ export default function Dashboard() {
           }}
         >
           <div className="w-full">
-            <p style={monoLabel}>
-              PREVIEW DEL BLINK
-            </p>
+            <p style={monoLabel}>PREVIEW DEL BLINK</p>
 
             <div className="mt-3 w-full sm:max-w-[340px] mx-auto lg:mx-0 rounded-lg overflow-hidden border border-white/10">
               <div
                 className="p-5 flex flex-col justify-between min-h-44"
                 style={{
-                  background:
-                    "linear-gradient(135deg,#0F0B1E,#102018)",
+                  background: "linear-gradient(135deg,#0F0B1E,#102018)",
                 }}
               >
-                <span
-                  style={{
-                    ...monoLabel,
-                    color: "#14F195",
-                  }}
-                >
+                <span style={{ ...monoLabel, color: "#14F195" }}>
                   CROWDBLINKS
                 </span>
 
-                <div>
-                  <p className="font-black text-lg leading-tight break-words">
+                <div className="mt-6">
+                  <h2 className="font-black text-xl break-words">
                     {previewTitle}
-                  </p>
-
-                  <p className="mt-2 text-xs text-white/40">
-                    {previewCapacity} boletos
-                    disponibles
+                  </h2>
+                  <p className="text-xs text-white/40 mt-1">
+                    {previewCapacity} boletos disponibles
                   </p>
                 </div>
               </div>
 
-              <div
-                className="px-4 py-3 flex flex-wrap gap-2 items-center justify-between"
-                style={{
-                  background: "#0F0922",
-                }}
-              >
-                <span className="text-sm font-bold">
-                  Comprar boleto
-                </span>
-
-                <span
-                  style={{
-                    fontFamily:
-                      "'DM Mono',monospace",
-                    fontSize: 12,
-                    color: "#14F195",
-                  }}
-                >
+              <div className="flex items-center justify-between px-5 py-3 bg-[#0F0B1E] border-t border-white/5">
+                <span className="font-bold text-sm">Comprar boleto</span>
+                <span className="font-mono text-xs text-[#14F195]">
                   {previewPrice} SOL
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Success */}
-          {status === "success" && (
-            <div className="w-full sm:max-w-[340px] mx-auto lg:mx-0 rounded-lg p-4 border border-emerald-400/20 bg-emerald-400/10">
-              <p className="font-bold text-sm">
-                Evento creado correctamente
-              </p>
-
-              <a
-                href={`https://explorer.solana.com/tx/${txSig}?cluster=devnet`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block mt-1 text-xs text-emerald-200 break-all"
-              >
-                Ver transaccion
-              </a>
-
-              <button
-                onClick={copyBlink}
-                type="button"
-                className="mt-3 w-full rounded-lg py-3 text-sm font-semibold bg-white/10 min-h-[44px]"
-              >
-                {copied
-                  ? "Copiado"
-                  : "Copiar Blink"}
-              </button>
-
-              <button
-                onClick={resetForm}
-                type="button"
-                className="mt-2 w-full rounded-lg py-3 text-sm font-semibold bg-white/5 min-h-[44px]"
-              >
-                Crear otro evento
-              </button>
-            </div>
-          )}
-
-          {/* Events */}
           {connected && (
-            <div className="w-full sm:max-w-[340px] mx-auto lg:mx-0">
+            <div className="pb-4">
               <div className="flex items-center justify-between gap-3 mb-3">
-                <p style={monoLabel}>
-                  MIS EVENTOS
-                </p>
-
+                <p style={monoLabel}>MIS EVENTOS</p>
                 <button
-                  onClick={
-                    handleRefreshEvents
-                  }
-                  type="button"
+                  onClick={handleRefreshEvents}
                   className="text-xs text-white/50 p-2 -mr-2 touch-manipulation"
                 >
-                  {loadingEvents
-                    ? "Cargando..."
-                    : "Actualizar"}
+                  {loadingEvents ? "Cargando..." : "Actualizar"}
                 </button>
               </div>
 
               {events.length === 0 ? (
                 <p className="py-4 text-xs text-white/30 text-center lg:text-left">
-                  Aún no tienes eventos.
+                  Aun no tienes eventos.
                 </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {events.map((event) => {
                     const origin =
-                      process.env
-                        .NEXT_PUBLIC_APP_URL ||
-                      (typeof window !==
-                      "undefined"
+                      process.env.NEXT_PUBLIC_APP_URL ||
+                      (typeof window !== "undefined"
                         ? window.location.origin
                         : "");
-
-                    const eventActionId =
-                      `${event.authority}_${event.eventId}`;
-
-                    const blink =
-                      `${origin}/buy/${encodeURIComponent(
-                        eventActionId
-                      )}`;
+                    const eventActionId = `${event.authority}_${event.eventId}`;
+                    const blink = `${origin}/buy/${encodeURIComponent(eventActionId)}`;
 
                     return (
                       <div
@@ -1025,28 +652,20 @@ export default function Dashboard() {
                             <p className="font-bold text-sm break-words">
                               {event.title}
                             </p>
-
                             <p className="text-[10px] text-white/30 break-all">
                               {event.eventId}
                             </p>
-
                             <p className="text-xs text-white/35 mt-1">
-                              {event.ticketsSold}/
-                              {event.maxTickets} vendidos
+                              {event.ticketsSold}/{event.maxTickets} vendidos
                             </p>
                           </div>
-
                           <span
                             className="self-start text-[10px] px-2 py-1 rounded-full border whitespace-nowrap"
                             style={{
-                              color:
-                                event.isActive
-                                  ? "#14F195"
-                                  : "#9945FF",
-                              borderColor:
-                                event.isActive
-                                  ? "rgba(20,241,149,0.3)"
-                                  : "rgba(153,69,255,0.4)",
+                              color: event.isActive ? "#14F195" : "#9945FF",
+                              borderColor: event.isActive
+                                ? "rgba(20,241,149,0.3)"
+                                : "rgba(153,69,255,0.4)",
                             }}
                           >
                             {event.isActive
@@ -1066,17 +685,11 @@ export default function Dashboard() {
                           >
                             Ver Blink
                           </a>
-
                           <button
-                            onClick={() =>
-                              handleClose(
-                                event.eventId
-                              )
-                            }
-                            type="button"
+                            onClick={() => handleClose(event.eventId)}
                             className="text-xs font-semibold text-red-300 p-2 -mr-2 touch-manipulation shrink-0"
                           >
-                            Cerrar evento
+                            Cerrar
                           </button>
                         </div>
                       </div>
@@ -1092,35 +705,14 @@ export default function Dashboard() {
   );
 }
 
-/*
- * ============================================================
- * FIELD
- * ============================================================
- */
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1.5">
-      <span style={monoLabel}>
-        {label}
-      </span>
-
+      <span style={monoLabel}>{label}</span>
       {children}
     </label>
   );
 }
-
-/*
- * ============================================================
- * LABELS
- * ============================================================
- */
 
 const monoLabel = {
   fontFamily: "'DM Mono',monospace",
@@ -1130,21 +722,7 @@ const monoLabel = {
   color: "rgba(255,255,255,0.35)",
 };
 
-/*
- * ============================================================
- * INPUTS
- * ============================================================
- */
-
 const inputCls = [
-  "w-full rounded-lg px-4 py-3 text-sm text-white outline-none transition-all min-h-[44px]",
+  "w-full rounded-lg px-4 py-3 text-base sm:text-sm text-white outline-none transition-all min-h-[44px] touch-manipulation",
   "bg-white/[0.04] border border-white/10 focus:border-purple-400/40",
 ].join(" ");
-
-const WalletMultiButton = dynamic(
-  () =>
-    import("@solana/wallet-adapter-react-ui").then(
-      (mod) => mod.WalletMultiButton
-    ),
-  { ssr: false }
-);
