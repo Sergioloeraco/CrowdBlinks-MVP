@@ -6,6 +6,51 @@ Proyecto desarrollado dentro del programa **Solana Latam Labs (Solana WayLearn)*
 
 ---
 
+## MVP funcional — entrega WayLearn
+
+**Estado:** funcional en **Solana Devnet**.
+
+### Entregables
+
+- **Repositorio público:** https://github.com/Sergioloeraco/CrowdBlinks-MVP
+- **MVP / Demo en Vercel:** https://crowd-blinks-mvp.vercel.app
+- **Red:** Solana Devnet
+- **Rama principal:** `main`
+- **Último commit funcional:** `fb2e2b4` — `feat: improve ticket blink fallback`
+- **Video Demo Day:** pendiente de subir al entregable de WayLearn en formato MP4, 1080p, máximo 2 minutos.
+
+### Flujo principal demostrado
+
+1. Crear un evento desde el Dashboard.
+2. Inicializar el evento on-chain en Solana Devnet.
+3. Persistir la metadata del evento.
+4. Generar el enlace directo al Blink/Fallback Web.
+5. Abrir el evento desde `/buy/[id]`.
+6. Conectar Phantom/Solflare mediante Wallet Adapter.
+7. Comprar un boleto mediante una `VersionedTransaction`.
+8. Confirmar la transacción en Solana Devnet.
+9. Consultar la transacción en Solana Explorer.
+10. Actualizar la disponibilidad del evento y mostrar estado `SOLD OUT` cuando se agotan los boletos.
+
+> **Nota:** el cNFT con Metaplex Bubblegum todavía no forma parte de la versión entregada. El contrato registra actualmente el boleto mediante el estado on-chain y el pago/split correspondiente; el mint del cNFT queda como deuda técnica posterior.
+
+### Evidencia para la demo
+
+Para el video se recomienda mostrar, en este orden:
+
+- Dashboard de CrowdBlinks.
+- Creación de un evento.
+- Confirmación de la transacción.
+- Aparición del enlace directo al Blink.
+- Apertura del fallback Web `/buy/[id]`.
+- Conexión de Phantom.
+- Compra del boleto.
+- Confirmación de la transacción.
+- Solana Explorer mostrando la transacción.
+- Regreso al evento mostrando la disponibilidad actualizada.
+
+---
+
 ## Stack
 
 | Capa | Tecnología |
