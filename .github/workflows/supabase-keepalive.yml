@@ -1,0 +1,20 @@
+name: Supabase Keepalive
+
+on:
+  schedule:
+    # Lunes y jueves a las 06:00 UTC — gap máximo de 4 días, nunca toca el límite de 7
+    - cron: '0 6 * * 1,4'
+  workflow_dispatch: {} # permite correrlo manualmente para probar
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: yarn add pg
+      - run: node scripts/supabase-keepalive.js
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
