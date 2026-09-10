@@ -8,7 +8,7 @@ Proyecto desarrollado dentro del programa **Solana Latam Labs (Solana WayLearn)*
 
 ## MVP funcional — entrega WayLearn
 
-**Estado:** funcional en **Solana Devnet**.
+**Estado:** funcional en **Solana Devnet**. Demo Day completado (31 de agosto de 2026).
 
 ### Entregables
 
@@ -16,8 +16,8 @@ Proyecto desarrollado dentro del programa **Solana Latam Labs (Solana WayLearn)*
 - **MVP / Demo en Vercel:** https://crowd-blinks-mvp.vercel.app
 - **Red:** Solana Devnet
 - **Rama principal:** `main`
-- **Último commit funcional:** `fb2e2b4` — `feat: improve ticket blink fallback`
-- **Video Demo Day:** pendiente de subir al entregable de WayLearn en formato MP4, 1080p, máximo 2 minutos.
+- **Último commit funcional:** `08bd9f8` — `docs: document Supabase keepalive automation`
+- **Video Demo Day:** entregado a Solana WayLearn. Video conjunto con todos los equipos disponible en YouTube: https://www.youtube.com/watch?v=9db4T6JA6zo
 
 ### Flujo principal demostrado
 
