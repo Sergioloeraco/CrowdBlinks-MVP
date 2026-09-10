@@ -220,6 +220,23 @@ La creación de eventos sigue el flujo:
 
 ---
 
+## Infraestructura / Mantenimiento
+
+El Free Tier de Supabase pausa automáticamente el proyecto después de 7 días sin actividad. Para evitarlo, el repositorio incluye un keepalive que mantiene activa la base de datos.
+
+- **Frecuencia:** lunes y jueves a las 06:00 UTC.
+- **Qué hace:** ejecuta el script `scripts/supabase-keepalive.js`, que se conecta a PostgreSQL mediante el Transaction Pooler de Supabase y realiza un `SELECT 1`.
+- **Automatización:** el workflow `.github/workflows/supabase-keepalive.yml` se ejecuta automáticamente según el cron configurado.
+- **Secret requerido:** `SUPABASE_DB_URL`, configurado en los Secrets del repositorio en GitHub Actions. No debe exponerse ni agregarse al repositorio.
+
+Para ejecutarlo manualmente durante debugging:
+
+1. Abre la pestaña **Actions** en GitHub.
+2. Selecciona **Supabase Keepalive**.
+3. Haz clic en **Run workflow**.
+
+---
+
 ## 5.1 Probar Blinks públicamente (ngrok)
 
 Para que X y las wallets puedan resolver el Blink necesitas HTTPS público:
