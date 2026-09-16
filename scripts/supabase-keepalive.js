@@ -8,8 +8,13 @@ async function main() {
 
   try {
     await client.connect();
-    const res = await client.query('SELECT 1');
-    console.log('✅ Supabase keepalive OK:', res.rows);
+    const res = await client.query(`
+      insert into public._keepalive_heartbeat (id, pinged_at)
+      values (1, now())
+      on conflict (id) do update set pinged_at = now()
+      returning pinged_at;
+    `);
+    console.log('✅ Supabase keepalive OK (write):', res.rows);
   } catch (err) {
     console.error('❌ Supabase keepalive FAILED:', err.message);
     process.exit(1);
