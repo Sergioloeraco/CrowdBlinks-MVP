@@ -1,26 +1,23 @@
-const { Client } = require('pg');
-
+// scripts/supabase-keepalive.js
 async function main() {
-  const client = new Client({
-    connectionString: process.env.SUPABASE_DB_URL,
-    ssl: { rejectUnauthorized: false },
+  const url = `${process.env.SUPABASE_URL}/rest/v1/_keepalive_heartbeat?on_conflict=id`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: process.env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify([{ id: 1, pinged_at: new Date().toISOString() }]),
   });
 
-  try {
-    await client.connect();
-    const res = await client.query(`
-      insert into public._keepalive_heartbeat (id, pinged_at)
-      values (1, now())
-      on conflict (id) do update set pinged_at = now()
-      returning pinged_at;
-    `);
-    console.log('✅ Supabase keepalive OK (write):', res.rows);
-  } catch (err) {
-    console.error('❌ Supabase keepalive FAILED:', err.message);
+  if (!res.ok) {
+    console.error('❌ Supabase keepalive FAILED:', res.status, await res.text());
     process.exit(1);
-  } finally {
-    await client.end();
   }
+  console.log('✅ Supabase keepalive OK (REST write):', await res.json());
 }
 
 main();
